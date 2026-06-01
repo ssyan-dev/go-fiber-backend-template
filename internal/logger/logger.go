@@ -5,10 +5,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func NewLogger(env string) *zap.Logger {
+func NewLogger(isProduction bool) *zap.Logger {
 	var config zap.Config
 
-	if env == "production" {
+	if isProduction {
 		config = zap.NewProductionConfig()
 		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	} else {
