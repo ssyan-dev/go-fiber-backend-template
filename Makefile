@@ -54,10 +54,11 @@ migrate-up:
 migrate-down:
 	@make migrate-action action=down
 
+# POSTGRES_HOST must be 'postgres' not 'localhost' when running api locally
 migrate-action:
 	docker compose run --rm postgres-migrate \
 		-path /migrations \
-		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
+		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:$ {POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
 		$(action)
 
 # other
