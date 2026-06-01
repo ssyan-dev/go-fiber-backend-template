@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS user_oauth_providers;
+
+DROP TABLE IF EXISTS users;
+
+DROP TYPE IF EXISTS auth_provider;
+
+DROP TYPE IF EXISTS user_role;
