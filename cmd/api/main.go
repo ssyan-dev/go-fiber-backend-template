@@ -3,12 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/database"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/logger"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
 	"go.uber.org/zap"
 )
@@ -45,6 +51,20 @@ func main() {
 	l.Info("redis connected!")
 
 	app := fiber.New()
+	l.Info("fiber initialized!",
+		zap.Int("port", cfg.App.Port),
+		zap.String("allowed_origin", cfg.App.AllowedOrigin),
+		zap.String("global_prefix", cfg.App.GlobalPrefix),
+	)
+
+	app.Use(recover.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{cfg.App.AllowedOrigin},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		AllowCredentials: true,
+	}))
+	app.Use(middleware.NewLogger(l))
+
 	api := app.Group(cfg.App.GlobalPrefix)
 
 	api.Get("/health", func(c fiber.Ctx) error {
@@ -54,7 +74,24 @@ func main() {
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
-	if err := app.Listen(addr); err != nil {
-		l.Fatal("failed to run http server: %v", zap.Error(err))
+	go func() {
+		if err := app.Listen(addr); err != nil {
+			l.Fatal("failed to run http server: %v", zap.Error(err))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	l.Info("shutting down...")
+
+	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
+		l.Error("shutdown failed", zap.Error(err))
 	}
+
+	l.Info("server stopped!")
 }
