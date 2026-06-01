@@ -70,7 +70,9 @@ type RedisConfig struct {
 }
 
 func InitConfig() (*Config, error) {
-	godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		return nil, err
+	}
 
 	var cfg Config
 	err := env.Parse(&cfg)
