@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
+)
 
 func main() {
-	fmt.Println("hello world")
+	cfg, err := config.InitConfig()
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+
+	fmt.Println(cfg)
 }
