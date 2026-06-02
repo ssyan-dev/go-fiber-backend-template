@@ -10,7 +10,7 @@ BACKEND_BIN = ./bin/api
 dev:
 	air
 
-build: clean
+build: clean swagger
 	go build -o $(BACKEND_BIN) $(BACKEND_MAIN)
 
 run:
@@ -26,6 +26,9 @@ tidy:
 
 fmt:
 	go fmt ./...
+
+swagger:
+	swag init -g $(BACKEND_MAIN)
 
 # docker
 docker-up:

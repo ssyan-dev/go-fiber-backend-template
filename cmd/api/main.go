@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	swaggo "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -17,8 +18,24 @@ import (
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
 	"go.uber.org/zap"
+
+	_ "github.com/ssyan-dev/go-fiber-backend-template/docs"
 )
 
+// @title			Backend API
+// @version		1.0
+// @description	Backend API
+
+// @contact.name	Stanislav Simakhin
+// @contact.url	https://ssyan.ru
+
+// @host			localhost:8080
+// @BasePath		/api/v1
+
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description			Bearer [JWT]
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -66,6 +83,8 @@ func main() {
 	app.Use(middleware.NewLogger(l))
 
 	api := app.Group(cfg.App.GlobalPrefix)
+
+	api.Get("/swagger/*", swaggo.HandlerDefault)
 
 	api.Get("/health", func(c fiber.Ctx) error {
 		return response.Success(c, fiber.StatusOK, "server is healthy!", fiber.Map{
