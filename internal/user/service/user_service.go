@@ -21,15 +21,31 @@ type UserService interface {
 }
 
 type userSvc struct {
-	repo repository.UserRepository
+	repo      repository.UserRepository
+	redisRepo repository.UserRedisRepository
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
-	return &userSvc{repo: repo}
+func NewUserService(repo repository.UserRepository, redisRepo repository.UserRedisRepository) UserService {
+	return &userSvc{
+		repo:      repo,
+		redisRepo: redisRepo,
+	}
 }
 
 func (s *userSvc) GetByID(ctx context.Context, id string) (*models.User, error) {
-	return s.repo.GetByID(ctx, id)
+	user, err := s.redisRepo.GetUser(ctx, id)
+	if err == nil && user != nil {
+		return user, nil
+	}
+
+	user, err = s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	_ = s.redisRepo.SetUser(ctx, user)
+
+	return user, nil
 }
 
 func (s *userSvc) Update(ctx context.Context, id string, email, curPassword, newPassword, avatarURL *string) error {
@@ -64,9 +80,16 @@ func (s *userSvc) Update(ctx context.Context, id string, email, curPassword, new
 		user.AvatarURL = avatarURL
 	}
 
-	return s.repo.Update(ctx, user)
+	if err := s.repo.Update(ctx, user); err != nil {
+		return err
+	}
+
+	return s.redisRepo.DeleteUser(ctx, id)
 }
 
 func (s *userSvc) Delete(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+	return s.redisRepo.DeleteUser(ctx, id)
 }

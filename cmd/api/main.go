@@ -106,7 +106,8 @@ func main() {
 	})
 
 	ur := userRepo.NewUserRepository(pg)
-	us := userService.NewUserService(ur)
+	urr := userRepo.NewUserRedisRepository(rdb)
+	us := userService.NewUserService(ur, urr)
 	uh := userHandler.NewUserHandler(us)
 
 	protected := api.Group("/", middleware.AuthMiddleware(&cfg.JWT))
