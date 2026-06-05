@@ -61,7 +61,7 @@ migrate-down:
 migrate-action:
 	docker compose run --rm postgres-migrate \
 		-path /migrations \
-		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:$ {POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
+		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
 		$(action)
 
 # other

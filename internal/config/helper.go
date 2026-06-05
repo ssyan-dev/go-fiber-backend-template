@@ -1,5 +1,9 @@
 package config
 
+var (
+	IsProduction = true
+)
+
 func (c *AppConfig) IsDevelopment() bool {
 	return c.Env == "development"
 }

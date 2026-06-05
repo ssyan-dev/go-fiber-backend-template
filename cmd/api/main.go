@@ -12,6 +12,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/handler"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/service"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/database"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/logger"
@@ -44,6 +47,7 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+	config.IsProduction = cfg.App.IsProduction()
 
 	l := logger.NewLogger(cfg.App.IsProduction())
 	defer l.Sync()
@@ -84,7 +88,14 @@ func main() {
 
 	api := app.Group(cfg.App.GlobalPrefix)
 
-	api.Get("/swagger/*", swaggo.HandlerDefault)
+	authRepo := repository.NewAuthRepository(pg)
+	authRedisRepo := repository.NewAuthRedisRepository(rdb, &cfg.JWT)
+	authService := service.NewAuthService(authRepo, authRedisRepo, &cfg.JWT, l)
+	authHandler := handler.NewAuthHandler(authService)
+
+	authHandler.RegisterRoutes(api)
+
+	api.Get("/docs/*", swaggo.HandlerDefault)
 
 	api.Get("/health", func(c fiber.Ctx) error {
 		return response.Success(c, fiber.StatusOK, "server is healthy!", fiber.Map{

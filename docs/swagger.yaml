@@ -1,4 +1,30 @@
 basePath: /api/v1
+definitions:
+  handler.loginReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.registerReq:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      passwordConfirm:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    - passwordConfirm
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -7,7 +33,77 @@ info:
   description: Backend API
   title: Backend API
   version: "1.0"
-paths: {}
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login user
+      parameters:
+      - description: login dto
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.loginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+      summary: Login user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+      summary: Logout user
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh JWT tokens
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+      summary: Refresh JWT tokens
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user
+      parameters:
+      - description: Register dto
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.registerReq'
+      produces:
+      - application/json
+      responses: {}
+      summary: Register new user
+      tags:
+      - auth
 securityDefinitions:
   BearerAuth:
     description: Bearer [JWT]
