@@ -81,7 +81,7 @@ func (h *AuthHandler) login(c fiber.Ctx) error {
 
 	accessToken, refreshToken, err := h.svc.Login(c.Context(), req.Email, req.Password)
 	if err != nil {
-		return response.Error(c, fiber.StatusUnauthorized, "invalid credentials", nil)
+		return response.Error(c, fiber.StatusUnauthorized, err.Error(), nil)
 	}
 
 	cookie.SetCookie(c, cookie.RefreshToken, refreshToken, h.svc.GetRefreshTokenTTL())
@@ -108,7 +108,7 @@ func (h *AuthHandler) refresh(c fiber.Ctx) error {
 
 	newAccessToken, newRefreshToken, err := h.svc.Refresh(c.Context(), refreshToken)
 	if err != nil {
-		return response.Error(c, fiber.StatusUnauthorized, "invalid refresh token", nil)
+		return response.Error(c, fiber.StatusUnauthorized, err.Error(), nil)
 	}
 
 	cookie.SetCookie(c, cookie.RefreshToken, newRefreshToken, h.svc.GetRefreshTokenTTL())

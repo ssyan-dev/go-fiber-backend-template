@@ -125,6 +125,59 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/auth/{provider}": {
+            "get": {
+                "description": "Get redirect URL for OAuth provider",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get OAuth URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider (google/yandex/github)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    }
+                }
+            }
+        },
+        "/auth/{provider}/callback": {
+            "get": {
+                "description": "Handle OAuth provider callback",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "OAuth Callback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider (google, yandex, github)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "OAuth code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/users/me": {
             "get": {
                 "security": [

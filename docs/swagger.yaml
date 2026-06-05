@@ -74,6 +74,41 @@ info:
   title: Backend API
   version: "1.0"
 paths:
+  /auth/{provider}:
+    get:
+      description: Get redirect URL for OAuth provider
+      parameters:
+      - description: Provider (google/yandex/github)
+        in: path
+        name: provider
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Found
+      summary: Get OAuth URL
+      tags:
+      - auth
+  /auth/{provider}/callback:
+    get:
+      description: Handle OAuth provider callback
+      parameters:
+      - description: Provider (google, yandex, github)
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: OAuth code
+        in: query
+        name: code
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: OAuth Callback
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:

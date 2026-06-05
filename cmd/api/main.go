@@ -97,6 +97,10 @@ func main() {
 	ah := authHandler.NewAuthHandler(as)
 	ah.RegisterRoutes(api)
 
+	oas := authService.NewOAuthService(ar, arr, &cfg.JWT, &cfg.OAuth, l)
+	oah := authHandler.NewOAuthHandler(oas, as)
+	oah.RegisterRoutes(api)
+
 	api.Get("/docs/*", swaggo.HandlerDefault)
 
 	api.Get("/health", func(c fiber.Ctx) error {
@@ -112,7 +116,6 @@ func main() {
 
 	protected := api.Group("/", middleware.AuthMiddleware(&cfg.JWT))
 	uh.RegisterRoutes(protected)
-
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	go func() {

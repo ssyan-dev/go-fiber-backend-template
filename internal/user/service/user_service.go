@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	ErrInvalidCurrentPassword = errors.New("invalid current password")
-	ErrPasswordRequired       = errors.New("both passwords are required")
+	ErrInvalidCurrentPassword           = errors.New("invalid current password")
+	ErrInvalidLoginTypeToChangePassword = errors.New("cannot change password: account created via oauth without password")
+	ErrPasswordRequired                 = errors.New("both passwords are required")
 )
 
 type UserService interface {
@@ -62,6 +63,10 @@ func (s *userSvc) Update(ctx context.Context, id string, email, curPassword, new
 	if curPassword != nil || newPassword != nil {
 		if curPassword == nil || newPassword == nil {
 			return ErrPasswordRequired
+		}
+
+		if user.PasswordHash == nil {
+			return ErrInvalidLoginTypeToChangePassword
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(*curPassword)); err != nil {

@@ -16,6 +16,7 @@ import (
 var (
 	ErrUserAlreadyExists  = errors.New("user already exists")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidLoginType   = errors.New("your account has no password. use oauth")
 	ErrInvalidToken       = errors.New("invalid token")
 )
 
@@ -73,6 +74,10 @@ func (s *authSvc) Login(ctx context.Context, email, password string) (string, st
 	user, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
 		return "", "", ErrInvalidCredentials
+	}
+
+	if user.PasswordHash == nil {
+		return "", "", ErrInvalidLoginType
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
