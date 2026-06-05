@@ -25,6 +25,46 @@ definitions:
     - password
     - passwordConfirm
     type: object
+  handler.updateUserReq:
+    properties:
+      avatar_url:
+        type: string
+      current_password:
+        minLength: 6
+        type: string
+      email:
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+    type: object
+  models.User:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_banned:
+        type: boolean
+      is_email_verified:
+        type: boolean
+      role:
+        $ref: '#/definitions/models.UserRole'
+      updated_at:
+        type: string
+    type: object
+  models.UserRole:
+    enum:
+    - default
+    - admin
+    type: string
+    x-enum-varnames:
+    - RoleDefault
+    - RoleAdmin
 host: localhost:8080
 info:
   contact:
@@ -104,6 +144,44 @@ paths:
       summary: Register new user
       tags:
       - auth
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Get self
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: Get self
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Update self
+      parameters:
+      - description: Update dto
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateUserReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Update self
+      tags:
+      - users
 securityDefinitions:
   BearerAuth:
     description: Bearer [JWT]

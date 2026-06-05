@@ -12,14 +12,17 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/handler"
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/service"
+	authHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/auth/handler"
+	authRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
+	authService "github.com/ssyan-dev/go-fiber-backend-template/internal/auth/service"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/database"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/logger"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
+	userHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/user/handler"
+	userRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/user/repository"
+	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
 	"go.uber.org/zap"
 
 	_ "github.com/ssyan-dev/go-fiber-backend-template/docs"
@@ -88,12 +91,11 @@ func main() {
 
 	api := app.Group(cfg.App.GlobalPrefix)
 
-	authRepo := repository.NewAuthRepository(pg)
-	authRedisRepo := repository.NewAuthRedisRepository(rdb, &cfg.JWT)
-	authService := service.NewAuthService(authRepo, authRedisRepo, &cfg.JWT, l)
-	authHandler := handler.NewAuthHandler(authService)
-
-	authHandler.RegisterRoutes(api)
+	ar := authRepo.NewAuthRepository(pg)
+	arr := authRepo.NewAuthRedisRepository(rdb, &cfg.JWT)
+	as := authService.NewAuthService(ar, arr, &cfg.JWT, l)
+	ah := authHandler.NewAuthHandler(as)
+	ah.RegisterRoutes(api)
 
 	api.Get("/docs/*", swaggo.HandlerDefault)
 
@@ -102,6 +104,14 @@ func main() {
 			"env": cfg.App.Env,
 		})
 	})
+
+	ur := userRepo.NewUserRepository(pg)
+	us := userService.NewUserService(ur)
+	uh := userHandler.NewUserHandler(us)
+
+	protected := api.Group("/", middleware.AuthMiddleware(&cfg.JWT))
+	uh.RegisterRoutes(protected)
+
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	go func() {
