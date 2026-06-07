@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/auth"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
@@ -18,7 +19,7 @@ func NewUserHandler(svc service.UserService) *UserHandler {
 func (h *UserHandler) RegisterRoutes(protected fiber.Router) {
 	g := protected.Group("/users")
 	g.Get("/me", h.getMe)
-	g.Patch("/me", h.updateMe)
+	g.Patch("/me", middleware.Validate[updateUserReq](), h.updateMe)
 }
 
 // getMe godoc
@@ -67,10 +68,7 @@ func (h *UserHandler) updateMe(c fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
 
-	var req updateUserReq
-	if err := c.Bind().JSON(&req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
+	req := c.Locals("body").(updateUserReq)
 
 	if err := h.svc.Update(c.Context(), userID, req.Email, req.CurrentPassword, req.NewPassword, req.AvatarURL); err != nil {
 		if err == service.ErrInvalidCurrentPassword {

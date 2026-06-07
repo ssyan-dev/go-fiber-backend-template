@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/service"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/cookie"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
 )
@@ -17,8 +18,8 @@ func NewAuthHandler(svc service.AuthService) *AuthHandler {
 
 func (h *AuthHandler) RegisterRoutes(api fiber.Router) {
 	g := api.Group("/auth")
-	g.Post("/register", h.register)
-	g.Post("/login", h.login)
+	g.Post("/register", middleware.Validate[registerReq](), h.register)
+	g.Post("/login", middleware.Validate[loginReq](), h.login)
 	g.Post("/logout", h.logout)
 	g.Post("/refresh", h.refresh)
 }
@@ -43,10 +44,7 @@ type loginReq struct {
 // @Param			request	body		registerReq	true	"Register dto"
 // @Router			/auth/register [post]
 func (h *AuthHandler) register(c fiber.Ctx) error {
-	var req registerReq
-	if err := c.Bind().JSON(&req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
+	req := c.Locals("body").(registerReq)
 
 	if req.Password != req.PasswordConfirm {
 		return response.Error(c, fiber.StatusBadRequest, "password didn't match", nil)
@@ -74,10 +72,7 @@ func (h *AuthHandler) register(c fiber.Ctx) error {
 // @Failure		401
 // @Router			/auth/login [post]
 func (h *AuthHandler) login(c fiber.Ctx) error {
-	var req loginReq
-	if err := c.Bind().JSON(&req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
+	req := c.Locals("body").(loginReq)
 
 	accessToken, refreshToken, err := h.svc.Login(c.Context(), req.Email, req.Password)
 	if err != nil {
