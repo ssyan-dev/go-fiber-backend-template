@@ -20,6 +20,9 @@ import (
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/logger"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
+	sessionHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/handler"
+	sessionRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/repository"
+	sessionService "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/service"
 	userHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/user/handler"
 	userRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/user/repository"
 	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
@@ -96,12 +99,16 @@ func main() {
 	api := app.Group(cfg.App.GlobalPrefix)
 
 	ar := authRepo.NewAuthRepository(pg)
-	arr := authRepo.NewAuthRedisRepository(rdb, &cfg.JWT)
-	as := authService.NewAuthService(ar, arr, &cfg.JWT, l)
+
+	sr := sessionRepo.NewSessionRepository(pg)
+	srr := sessionRepo.NewSessionRedisRepository(rdb)
+	ss := sessionService.NewSessionService(sr, srr)
+
+	as := authService.NewAuthService(ar, ss, &cfg.JWT, l)
 	ah := authHandler.NewAuthHandler(as)
 	ah.RegisterRoutes(api)
 
-	oas := authService.NewOAuthService(ar, arr, &cfg.JWT, &cfg.OAuth, l)
+	oas := authService.NewOAuthService(ar, ss, &cfg.JWT, &cfg.OAuth, l)
 	oah := authHandler.NewOAuthHandler(oas, as)
 	oah.RegisterRoutes(api)
 
@@ -118,8 +125,11 @@ func main() {
 	us := userService.NewUserService(ur, urr)
 	uh := userHandler.NewUserHandler(us)
 
+	sh := sessionHandler.NewSessionHandler(ss)
+
 	protected := api.Group("/", middleware.AuthMiddleware(&cfg.JWT))
 	uh.RegisterRoutes(protected)
+	sh.RegisterRoutes(protected)
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	go func() {

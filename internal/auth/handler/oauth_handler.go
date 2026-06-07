@@ -20,7 +20,7 @@ func NewOAuthHandler(svc service.OAuthService, authSvc service.AuthService) *OAu
 }
 
 func (h *OAuthHandler) RegisterRoutes(api fiber.Router) {
-	g := api.Group("/auth")
+	g := api.Group("/auth/oauth")
 	g.Get("/:provider", h.getAuthURL)
 	g.Get("/:provider/callback", h.handleCallback)
 }
@@ -31,7 +31,7 @@ func (h *OAuthHandler) RegisterRoutes(api fiber.Router) {
 // @Tags			auth
 // @Param			provider	path	string	true	"Provider (google/yandex/github)"
 // @Success		302
-// @Router			/auth/{provider} [get]
+// @Router			/auth/oauth/{provider} [get]
 func (h *OAuthHandler) getAuthURL(c fiber.Ctx) error {
 	provider := c.Params("provider")
 	url, err := h.svc.GetAuthURL(provider)
@@ -49,7 +49,7 @@ func (h *OAuthHandler) getAuthURL(c fiber.Ctx) error {
 // @Param			provider	path	string	true	"Provider (google, yandex, github)"
 // @Param			code		query	string	true	"OAuth code"
 // @Success		200
-// @Router			/auth/{provider}/callback [get]
+// @Router			/auth/oauth/{provider}/callback [get]
 func (h *OAuthHandler) handleCallback(c fiber.Ctx) error {
 	provider := c.Params("provider")
 	code := c.Query("code")
@@ -57,7 +57,7 @@ func (h *OAuthHandler) handleCallback(c fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, "code is required", nil)
 	}
 
-	accessToken, refreshToken, err := h.svc.HandleCallback(c.Context(), provider, code)
+	accessToken, refreshToken, err := h.svc.HandleCallback(c.Context(), provider, code, c.IP(), c.Get("User-Agent"))
 	if err != nil {
 		return response.Error(c, fiber.StatusInternalServerError, err.Error(), nil)
 	}

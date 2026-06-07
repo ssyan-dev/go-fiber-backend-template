@@ -74,7 +74,7 @@ func (h *AuthHandler) register(c fiber.Ctx) error {
 func (h *AuthHandler) login(c fiber.Ctx) error {
 	req := c.Locals("body").(loginReq)
 
-	accessToken, refreshToken, err := h.svc.Login(c.Context(), req.Email, req.Password)
+	accessToken, refreshToken, err := h.svc.Login(c.Context(), req.Email, req.Password, c.IP(), c.Get("User-Agent"))
 	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, err.Error(), nil)
 	}
@@ -101,7 +101,7 @@ func (h *AuthHandler) refresh(c fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnauthorized, "refresh token not found", nil)
 	}
 
-	newAccessToken, newRefreshToken, err := h.svc.Refresh(c.Context(), refreshToken)
+	newAccessToken, newRefreshToken, err := h.svc.Refresh(c.Context(), refreshToken, c.IP(), c.Get("User-Agent"))
 	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, err.Error(), nil)
 	}

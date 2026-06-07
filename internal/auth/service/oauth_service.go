@@ -13,6 +13,7 @@ import (
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
+	sessionService "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/service"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -28,30 +29,30 @@ var (
 
 type OAuthService interface {
 	GetAuthURL(provider string) (string, error)
-	HandleCallback(ctx context.Context, provider, code string) (string, string, error)
+	HandleCallback(ctx context.Context, provider, code, ip, userAgent string) (string, string, error)
 }
 
 type oAuthSvc struct {
-	repo      repository.AuthRepository
-	redisRepo repository.AuthRedisRepository
-	cfg       *config.OAuthConfig
-	jwtCfg    *config.JWTConfig
-	l         *zap.Logger
+	repo       repository.AuthRepository
+	sessionSvc sessionService.SessionService
+	cfg        *config.OAuthConfig
+	jwtCfg     *config.JWTConfig
+	l          *zap.Logger
 }
 
 func NewOAuthService(
 	repo repository.AuthRepository,
-	redisRepo repository.AuthRedisRepository,
+	sessionSvc sessionService.SessionService,
 	jwtCfg *config.JWTConfig,
 	oauthCfg *config.OAuthConfig,
 	l *zap.Logger,
 ) OAuthService {
 	return &oAuthSvc{
-		repo:      repo,
-		redisRepo: redisRepo,
-		jwtCfg:    jwtCfg,
-		cfg:       oauthCfg,
-		l:         l,
+		repo:       repo,
+		sessionSvc: sessionSvc,
+		jwtCfg:     jwtCfg,
+		cfg:        oauthCfg,
+		l:          l,
 	}
 }
 
@@ -64,7 +65,7 @@ func (s *oAuthSvc) GetAuthURL(provider string) (string, error) {
 	return conf.AuthCodeURL("state"), nil
 }
 
-func (s *oAuthSvc) HandleCallback(ctx context.Context, provider, code string) (string, string, error) {
+func (s *oAuthSvc) HandleCallback(ctx context.Context, provider, code, ip, userAgent string) (string, string, error) {
 	conf, err := s.getProviderConfig(provider)
 	if err != nil {
 		return "", "", err
@@ -109,8 +110,16 @@ func (s *oAuthSvc) HandleCallback(ctx context.Context, provider, code string) (s
 		return "", "", err
 	}
 
-	err = s.redisRepo.SetRefreshToken(ctx, user.ID.String(), refreshToken)
-	if err != nil {
+	session := &models.Session{
+		UserID:       user.ID,
+		RefreshToken: refreshToken,
+		AccessToken:  accessToken,
+		IP:           ip,
+		UserAgent:    userAgent,
+		ExpiresAt:    time.Now().Add(s.jwtCfg.RefreshTokenTTL),
+	}
+	if err := s.sessionSvc.Create(ctx, session); err != nil {
+		s.l.Error("failed to create session", zap.Error(err))
 		return "", "", err
 	}
 

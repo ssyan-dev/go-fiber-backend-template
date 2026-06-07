@@ -35,9 +35,9 @@ func main() {
 
 func seedUsers(ctx context.Context, repo repository.AuthRepository) {
 	users := []struct {
-		email    string
-		password string
-		role     models.UserRole
+		email           string
+		password        string
+		role            models.UserRole
 		isEmailVerified bool
 	}{
 		{"unverified@backend.com", "user123", models.RoleDefault, false},
