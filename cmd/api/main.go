@@ -74,7 +74,11 @@ func main() {
 	defer rdb.Close()
 	l.Info("redis connected!")
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ServerHeader: "backend-template",
+		ErrorHandler: response.ErrorHandler,
+	})
+
 	l.Info("fiber initialized!",
 		zap.Int("port", cfg.App.Port),
 		zap.String("allowed_origin", cfg.App.AllowedOrigin),
