@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -41,7 +42,28 @@ func AuthMiddleware(cfg *config.JWTConfig) fiber.Handler {
 			return response.Error(c, fiber.StatusUnauthorized, "invalid user id in token", nil)
 		}
 
+		role, ok := claims["role"].(string)
+		if !ok {
+			role = "default"
+		}
+
 		c.Locals(auth.UserIDLocals, userID)
+		c.Locals(auth.UserRoleLocals, role)
 		return c.Next()
+	}
+}
+
+func RolesMiddleware(allowedRoles ...string) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		userRole, ok := c.Locals(auth.UserRoleLocals).(string)
+		if !ok {
+			return response.Error(c, fiber.StatusForbidden, "role not found", nil)
+		}
+
+		if slices.Contains(allowedRoles, userRole) {
+			return c.Next()
+		}
+
+		return response.Error(c, fiber.StatusForbidden, "missing permissions", nil)
 	}
 }

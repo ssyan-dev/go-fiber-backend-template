@@ -5,7 +5,8 @@ import (
 )
 
 const (
-	UserIDLocals = "user_id"
+	UserIDLocals   = "user_id"
+	UserRoleLocals = "user_role"
 )
 
 func GetMe(c fiber.Ctx) (string, bool) {
@@ -15,3 +16,4 @@ func GetMe(c fiber.Ctx) (string, bool) {
 	}
 	return userID, true
 }
+

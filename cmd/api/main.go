@@ -131,6 +131,9 @@ func main() {
 	uh.RegisterRoutes(protected)
 	sh.RegisterRoutes(protected)
 
+	// admin := api.Group("/admin", middleware.AuthMiddleware(&cfg.JWT), middleware.RolesMiddleware("admin")) // example how to use role middleware 
+
+
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	go func() {
 		if err := app.Listen(addr); err != nil {
