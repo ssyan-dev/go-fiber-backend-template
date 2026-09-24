@@ -10,6 +10,7 @@ import (
 type Config struct {
 	App      AppConfig
 	JWT      JWTConfig
+	SMTP     SMTPConfig
 	OAuth    OAuthConfig
 	Postgres PostgresConfig
 	Redis    RedisConfig
@@ -26,6 +27,15 @@ type JWTConfig struct {
 	SecretKey       string        `env:"JWT_SECRET_KEY,required"`
 	AccessTokenTTL  time.Duration `env:"JWT_ACCESS_TOKEN_TTL" envDefault:"30m"`
 	RefreshTokenTTL time.Duration `env:"JWT_REFRESH_TOKEN_TTL" envDefault:"336h"`
+}
+
+type SMTPConfig struct {
+	Enabled  bool   `env:"SMTP_ENABLED" envDefault:"false"`
+	Host     string `env:"SMTP_HOST"`
+	Port     int    `env:"SMTP_PORT" envDefault:"587"`
+	Email    string `env:"SMTP_EMAIL"`
+	Password string `env:"SMTP_PASSWORD"`
+	FromName string `env:"SMTP_FROM_NAME" envDefault:"Backend"`
 }
 
 type OAuthConfig struct {

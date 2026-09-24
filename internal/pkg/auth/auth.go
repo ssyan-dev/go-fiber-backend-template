@@ -16,4 +16,3 @@ func GetMe(c fiber.Ctx) (string, bool) {
 	}
 	return userID, true
 }
-
