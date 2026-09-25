@@ -23,3 +23,7 @@ func (c *SMTPConfig) ConnectionType() string {
 	}
 	return SMTP_STARTTLS
 }
+
+func (c *OAuthConfig) IsEnabled() bool {
+	return c.GitHub.Enabled || c.Google.Enabled || c.Yandex.Enabled;
+}

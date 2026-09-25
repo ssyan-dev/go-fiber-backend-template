@@ -46,23 +46,23 @@ type OAuthConfig struct {
 
 type GoogleOAuthConfig struct {
 	Enabled      bool   `env:"GOOGLE_OAUTH_ENABLED" envDefault:"false"`
-	ClientID     string `env:"GOOGLE_CLIENT_ID,required"`
-	ClientSecret string `env:"GOOGLE_CLIENT_SECRET,required"`
-	RedirectURL  string `env:"GOOGLE_REDIRECT_URL,required"`
+	ClientID     string `env:"GOOGLE_CLIENT_ID"`
+	ClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
+	RedirectURL  string `env:"GOOGLE_REDIRECT_URL"`
 }
 
 type GitHubOAuthConfig struct {
 	Enabled      bool   `env:"GITHUB_OAUTH_ENABLED" envDefault:"false"`
-	ClientID     string `env:"GITHUB_CLIENT_ID,required"`
-	ClientSecret string `env:"GITHUB_CLIENT_SECRET,required"`
-	RedirectURL  string `env:"GITHUB_REDIRECT_URL,required"`
+	ClientID     string `env:"GITHUB_CLIENT_ID"`
+	ClientSecret string `env:"GITHUB_CLIENT_SECRET"`
+	RedirectURL  string `env:"GITHUB_REDIRECT_URL"`
 }
 
 type YandexOAuthConfig struct {
 	Enabled      bool   `env:"YANDEX_OAUTH_ENABLED" envDefault:"false"`
-	ClientID     string `env:"YANDEX_CLIENT_ID,required"`
-	ClientSecret string `env:"YANDEX_CLIENT_SECRET,required"`
-	RedirectURL  string `env:"YANDEX_REDIRECT_URL,required"`
+	ClientID     string `env:"YANDEX_CLIENT_ID"`
+	ClientSecret string `env:"YANDEX_CLIENT_SECRET"`
+	RedirectURL  string `env:"YANDEX_REDIRECT_URL"`
 }
 
 type PostgresConfig struct {

@@ -108,9 +108,11 @@ func main() {
 	ah := authHandler.NewAuthHandler(as)
 	ah.RegisterRoutes(api)
 
-	oas := authService.NewOAuthService(ar, ss, &cfg.JWT, &cfg.OAuth, l)
-	oah := authHandler.NewOAuthHandler(oas, as)
-	oah.RegisterRoutes(api)
+	if cfg.OAuth.IsEnabled() {
+		oas := authService.NewOAuthService(ar, ss, &cfg.JWT, &cfg.OAuth, l)
+		oah := authHandler.NewOAuthHandler(oas, as)
+		oah.RegisterRoutes(api)
+	}
 
 	api.Get("/docs/*", swaggo.HandlerDefault)
 
