@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/database"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
+	userRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/user/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -36,9 +36,9 @@ func main() {
 	}
 	defer pg.Close()
 
-	authRepo := repository.NewAuthRepository(pg)
+	ur := userRepo.NewUserRepository(pg)
 
-	_, err = authRepo.GetByEmail(ctx, *email)
+	_, err = ur.GetByEmail(ctx, *email)
 	if err == nil {
 		log.Fatalf("user with email %s already exists", *email)
 	}
@@ -56,7 +56,7 @@ func main() {
 		IsEmailVerified: true,
 	}
 
-	if err := authRepo.CreateUser(ctx, user); err != nil {
+	if err := ur.Create(ctx, user); err != nil {
 		log.Fatalf("failed to create admin: %v", err)
 	}
 

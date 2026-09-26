@@ -11,6 +11,7 @@ type Config struct {
 	App      AppConfig
 	JWT      JWTConfig
 	SMTP     SMTPConfig
+	Auth     AuthConfig
 	OAuth    OAuthConfig
 	Postgres PostgresConfig
 	Redis    RedisConfig
@@ -36,6 +37,11 @@ type SMTPConfig struct {
 	Email    string `env:"SMTP_EMAIL"`
 	Password string `env:"SMTP_PASSWORD"`
 	FromName string `env:"SMTP_FROM_NAME" envDefault:"Backend"`
+}
+
+type AuthConfig struct {
+	VerifyEmail             bool   `env:"AUTH_VERIFY_EMAIL" envDefault:"false"`
+	VerificationRedirectURL string `env:"AUTH_VERIFICATION_REDIRECT_URL" envDefault:"http://localhost:8080/api/v1/auth/verification"`
 }
 
 type OAuthConfig struct {

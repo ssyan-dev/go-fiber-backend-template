@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/service"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
@@ -52,7 +54,7 @@ func (h *AuthHandler) register(c fiber.Ctx) error {
 
 	user, err := h.svc.Register(c.Context(), req.Email, req.Password)
 	if err != nil {
-		if err == service.ErrUserAlreadyExists {
+		if errors.Is(err, service.ErrUserAlreadyExists) {
 			return response.Error(c, fiber.StatusConflict, "user already exists", nil)
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "failed to register user", nil)

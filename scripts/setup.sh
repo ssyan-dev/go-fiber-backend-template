@@ -23,7 +23,7 @@ done
 echo "running database migrations..."
 make migrate-up
 
-echo "seeding database..."
-make seed
+# echo "seeding database..."
+# make seed
 
 echo "setup complete! 'make dev' to start app in dev mode"

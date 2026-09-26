@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
 	sessionService "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/service"
+	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -33,7 +33,7 @@ type OAuthService interface {
 }
 
 type oAuthSvc struct {
-	repo       repository.AuthRepository
+	userSvc    userService.UserService
 	sessionSvc sessionService.SessionService
 	cfg        *config.OAuthConfig
 	jwtCfg     *config.JWTConfig
@@ -41,14 +41,14 @@ type oAuthSvc struct {
 }
 
 func NewOAuthService(
-	repo repository.AuthRepository,
+	userSvc userService.UserService,
 	sessionSvc sessionService.SessionService,
 	jwtCfg *config.JWTConfig,
 	oauthCfg *config.OAuthConfig,
 	l *zap.Logger,
 ) OAuthService {
 	return &oAuthSvc{
-		repo:       repo,
+		userSvc:    userSvc,
 		sessionSvc: sessionSvc,
 		jwtCfg:     jwtCfg,
 		cfg:        oauthCfg,
@@ -81,21 +81,20 @@ func (s *oAuthSvc) HandleCallback(ctx context.Context, provider, code, ip, userA
 		return "", "", err
 	}
 
-	user, err := s.repo.GetByEmail(ctx, email)
+	user, err := s.userSvc.GetByEmail(ctx, email)
 	if err != nil {
-		user = &models.User{
-			Email:           email,
-			AvatarURL:       &avatarURL,
-			Role:            models.RoleDefault,
-			IsEmailVerified: true,
+		var av *string
+		if avatarURL != "" {
+			av = &avatarURL
 		}
-		if err := s.repo.CreateUser(ctx, user); err != nil {
+		user, err = s.userSvc.CreateOAuthUser(ctx, email, av)
+		if err != nil {
 			s.l.Error("failed to create oauth user", zap.Error(err))
 			return "", "", err
 		}
 	}
 
-	err = s.repo.LinkOAuthProvider(ctx, user.ID.String(), provider, providerUserID, email)
+	err = s.userSvc.LinkOAuthProvider(ctx, user.ID.String(), provider, providerUserID, email)
 	if err != nil {
 		s.l.Error("failed to link oauth provider", zap.Error(err))
 	}

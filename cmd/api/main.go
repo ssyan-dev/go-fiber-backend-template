@@ -13,10 +13,10 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	authHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/auth/handler"
-	authRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
 	authService "github.com/ssyan-dev/go-fiber-backend-template/internal/auth/service"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/database"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/infra/mailer"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/logger"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
@@ -26,6 +26,9 @@ import (
 	userHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/user/handler"
 	userRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/user/repository"
 	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
+	vcHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/handler"
+	vcRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/repository"
+	vcService "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/service"
 	"go.uber.org/zap"
 
 	_ "github.com/ssyan-dev/go-fiber-backend-template/docs"
@@ -98,18 +101,32 @@ func main() {
 
 	api := app.Group(cfg.App.GlobalPrefix)
 
-	ar := authRepo.NewAuthRepository(pg)
-
 	sr := sessionRepo.NewSessionRepository(pg)
 	srr := sessionRepo.NewSessionRedisRepository(rdb)
 	ss := sessionService.NewSessionService(sr, srr)
 
-	as := authService.NewAuthService(ar, ss, &cfg.JWT, l)
+	templatesFS := os.DirFS("internal/infra/mailer")
+	ms, err := mailer.NewMailerService(&cfg.SMTP, l, templatesFS)
+	if err != nil {
+		l.Fatal("mailer err", zap.Error(err))
+	}
+
+	ur := userRepo.NewUserRepository(pg)
+	urr := userRepo.NewUserRedisRepository(rdb)
+	us := userService.NewUserService(ur, urr)
+	uh := userHandler.NewUserHandler(us)
+
+	vcr := vcRepo.NewVerificationCodeRepository(pg)
+	vcs := vcService.NewVerificationCodeService(vcr, us, ms, cfg.Auth.VerificationRedirectURL, l)
+	vch := vcHandler.NewVerificationHandler(vcs)
+	vch.RegisterRoutes(api)
+
+	as := authService.NewAuthService(us, ss, vcs, &cfg.JWT, &cfg.Auth, l)
 	ah := authHandler.NewAuthHandler(as)
 	ah.RegisterRoutes(api)
 
 	if cfg.OAuth.IsEnabled() {
-		oas := authService.NewOAuthService(ar, ss, &cfg.JWT, &cfg.OAuth, l)
+		oas := authService.NewOAuthService(us, ss, &cfg.JWT, &cfg.OAuth, l)
 		oah := authHandler.NewOAuthHandler(oas, as)
 		oah.RegisterRoutes(api)
 	}
@@ -121,11 +138,6 @@ func main() {
 			"env": cfg.App.Env,
 		})
 	})
-
-	ur := userRepo.NewUserRepository(pg)
-	urr := userRepo.NewUserRedisRepository(rdb)
-	us := userService.NewUserService(ur, urr)
-	uh := userHandler.NewUserHandler(us)
 
 	sh := sessionHandler.NewSessionHandler(ss)
 

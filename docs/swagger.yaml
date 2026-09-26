@@ -25,6 +25,13 @@ definitions:
     - password
     - passwordConfirm
     type: object
+  handler.resendEmailVerificationReq:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   handler.updateUserReq:
     properties:
       avatar_url:
@@ -272,6 +279,53 @@ paths:
       summary: Update self
       tags:
       - users
+  /verification:
+    get:
+      consumes:
+      - application/json
+      description: Verification (email verification, password reset, etc..)
+      parameters:
+      - description: Verification code
+        in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Verification
+      tags:
+      - auth
+  /verification/resend-email-verification:
+    post:
+      consumes:
+      - application/json
+      description: Resend Email Verification code
+      parameters:
+      - description: Resend email verification dto
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.resendEmailVerificationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Resend Email Verification code
+      tags:
+      - auth
 securityDefinitions:
   BearerAuth:
     description: Bearer [JWT]

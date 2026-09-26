@@ -6,19 +6,21 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/auth/repository"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
 	sessionService "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/service"
+	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
+	vcService "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/service"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInvalidLoginType   = errors.New("your account has no password. use oauth")
-	ErrInvalidToken       = errors.New("invalid token")
+	ErrUserAlreadyExists   = userService.ErrUserAlreadyExists
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrInvalidLoginType    = errors.New("your account has no password. use oauth")
+	ErrInvalidToken        = errors.New("invalid token")
+	ErrEmailMustBeVerified = errors.New("please verify your email")
 )
 
 type AuthService interface {
@@ -30,54 +32,50 @@ type AuthService interface {
 }
 
 type authSvc struct {
-	repo       repository.AuthRepository
+	userSvc    userService.UserService
 	sessionSvc sessionService.SessionService
+	vcSvc      vcService.VerificationCodeService
 	cfg        *config.JWTConfig
+	authCfg    *config.AuthConfig
 	l          *zap.Logger
 }
 
 func NewAuthService(
-	repo repository.AuthRepository,
+	userSvc userService.UserService,
 	sessionSvc sessionService.SessionService,
+	vcSvc vcService.VerificationCodeService,
 	cfg *config.JWTConfig,
+	authCfg *config.AuthConfig,
 	l *zap.Logger,
 ) AuthService {
 	return &authSvc{
-		repo:       repo,
+		userSvc:    userSvc,
 		sessionSvc: sessionSvc,
+		vcSvc:      vcSvc,
 		cfg:        cfg,
+		authCfg:    authCfg,
 		l:          l,
 	}
 }
 
 func (s *authSvc) Register(ctx context.Context, email, password string) (*models.User, error) {
-	existing, _ := s.repo.GetByEmail(ctx, email)
-	if existing != nil {
-		return nil, ErrUserAlreadyExists
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	user, err := s.userSvc.Create(ctx, email, password)
 	if err != nil {
+		if !errors.Is(err, userService.ErrUserAlreadyExists) {
+			s.l.Error("failed to create user", zap.Error(err))
+		}
 		return nil, err
 	}
 
-	hashStr := string(hash)
-	user := &models.User{
-		Email:        email,
-		PasswordHash: &hashStr,
-		Role:         models.RoleDefault,
-	}
-
-	if err := s.repo.CreateUser(ctx, user); err != nil {
-		s.l.Error("failed to create user", zap.Error(err))
-		return nil, err
+	if err := s.vcSvc.SendEmailVerificationCode(ctx, user.ID.String(), user.Email); err != nil {
+		s.l.Error("failed to send verification email", zap.Error(err))
 	}
 
 	return user, nil
 }
 
 func (s *authSvc) Login(ctx context.Context, email, password, ip, userAgent string) (string, string, error) {
-	user, err := s.repo.GetByEmail(ctx, email)
+	user, err := s.userSvc.GetByEmail(ctx, email)
 	if err != nil {
 		return "", "", ErrInvalidCredentials
 	}
@@ -88,6 +86,10 @@ func (s *authSvc) Login(ctx context.Context, email, password, ip, userAgent stri
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
 		return "", "", ErrInvalidCredentials
+	}
+
+	if s.authCfg.VerifyEmail && !user.IsEmailVerified {
+		return "", "", ErrEmailMustBeVerified
 	}
 
 	accessToken, err := s.generateJWTToken(user, s.cfg.AccessTokenTTL)
@@ -146,7 +148,7 @@ func (s *authSvc) Refresh(ctx context.Context, refreshToken, ip, userAgent strin
 		return "", "", ErrInvalidToken
 	}
 
-	user, err := s.repo.GetByID(ctx, userID)
+	user, err := s.userSvc.GetByID(ctx, userID)
 	if err != nil {
 		return "", "", ErrInvalidToken
 	}

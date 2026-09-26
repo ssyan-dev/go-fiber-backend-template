@@ -25,5 +25,5 @@ func (c *SMTPConfig) ConnectionType() string {
 }
 
 func (c *OAuthConfig) IsEnabled() bool {
-	return c.GitHub.Enabled || c.Google.Enabled || c.Yandex.Enabled;
+	return c.GitHub.Enabled || c.Google.Enabled || c.Yandex.Enabled
 }
