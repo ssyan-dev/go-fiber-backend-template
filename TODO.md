@@ -2,8 +2,7 @@
 
 ## SOON:
 
-1. implement reset auth password (email verification!!)
-2. users --C--RUD for admin role
+1. users --C--RUD for admin role
 
 ## NOT SOON
 

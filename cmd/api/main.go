@@ -26,7 +26,6 @@ import (
 	userHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/user/handler"
 	userRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/user/repository"
 	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
-	vcHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/handler"
 	vcRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/repository"
 	vcService "github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/service"
 	"go.uber.org/zap"
@@ -118,11 +117,9 @@ func main() {
 	uh := userHandler.NewUserHandler(us)
 
 	vcr := vcRepo.NewVerificationCodeRepository(pg)
-	vcs := vcService.NewVerificationCodeService(vcr, us, ms, baseURL, l)
-	vch := vcHandler.NewVerificationHandler(vcs)
-	vch.RegisterRoutes(api)
+	vcs := vcService.NewVerificationCodeService(vcr, l)
 
-	as := authService.NewAuthService(us, ss, vcs, &cfg.JWT, &cfg.Auth, l)
+	as := authService.NewAuthService(us, ss, vcs, ms, &cfg.JWT, &cfg.Auth, baseURL, l)
 	ah := authHandler.NewAuthHandler(as)
 	ah.RegisterRoutes(api)
 

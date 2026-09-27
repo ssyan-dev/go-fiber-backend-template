@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	mailerService "github.com/ssyan-dev/go-fiber-backend-template/internal/infra/mailer"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/code"
-	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/verification_codes/repository"
 	"go.uber.org/zap"
 )
@@ -19,41 +17,27 @@ func mustParseUUID(s string) uuid.UUID {
 }
 
 var (
-	ErrInvalidCode          = errors.New("invalid or expired verification code")
-	ErrUserNotFound         = errors.New("user not found")
-	ErrEmailAlreadyVerified = errors.New("email is already verified")
+	ErrInvalidCode = errors.New("invalid or expired verification code")
 )
 
 type VerificationCodeService interface {
 	Create(ctx context.Context, userID string, t models.VerificationType, ttl time.Duration) (string, error)
 	Verify(ctx context.Context, code string, t models.VerificationType) (*models.VerificationCode, error)
 	DeleteByUserIDAndType(ctx context.Context, userID string, t models.VerificationType) error
-	VerifyEmail(ctx context.Context, code string) error
-	SendEmailVerificationCode(ctx context.Context, userID, email string) error
-	ResendEmailVerificationCode(ctx context.Context, email string) error
 }
 
 type verificationCodeSvc struct {
-	repo        repository.VerificationCodeRepository
-	userSvc     userService.UserService
-	mailerSvc   mailerService.MailerService
-	redirectURL string
-	l           *zap.Logger
+	repo repository.VerificationCodeRepository
+	l    *zap.Logger
 }
 
 func NewVerificationCodeService(
 	repo repository.VerificationCodeRepository,
-	userSvc userService.UserService,
-	mailerSvc mailerService.MailerService,
-	baseURL string,
 	l *zap.Logger,
 ) VerificationCodeService {
 	return &verificationCodeSvc{
-		repo:        repo,
-		userSvc:     userSvc,
-		mailerSvc:   mailerSvc,
-		redirectURL: baseURL + "/verification",
-		l:           l,
+		repo: repo,
+		l:    l,
 	}
 }
 
@@ -103,44 +87,4 @@ func (s *verificationCodeSvc) Verify(ctx context.Context, verificationCode strin
 
 func (s *verificationCodeSvc) DeleteByUserIDAndType(ctx context.Context, userID string, t models.VerificationType) error {
 	return s.repo.DeleteByUserIDAndType(ctx, userID, t)
-}
-
-func (s *verificationCodeSvc) VerifyEmail(ctx context.Context, code string) error {
-	vc, err := s.Verify(ctx, code, models.VerificationTypeEmail)
-	if err != nil {
-		return err
-	}
-
-	if err := s.userSvc.SetEmailVerified(ctx, vc.UserID.String()); err != nil {
-		s.l.Error("failed to set user email verified", zap.Error(err))
-		return err
-	}
-
-	return nil
-}
-
-func (s *verificationCodeSvc) SendEmailVerificationCode(ctx context.Context, userID, email string) error {
-	verificationCode, err := s.Create(ctx, userID, models.VerificationTypeEmail, 10*time.Minute)
-	if err != nil {
-		return err
-	}
-
-	return s.mailerSvc.SendTemplate(ctx, email, "Verify your email", "email-verification.html", map[string]string{
-		"Email": email,
-		"URL":   s.redirectURL,
-		"Code":  verificationCode,
-	})
-}
-
-func (s *verificationCodeSvc) ResendEmailVerificationCode(ctx context.Context, email string) error {
-	user, err := s.userSvc.GetByEmail(ctx, email)
-	if err != nil || user == nil {
-		return ErrUserNotFound
-	}
-
-	if user.IsEmailVerified {
-		return ErrEmailAlreadyVerified
-	}
-
-	return s.SendEmailVerificationCode(ctx, user.ID.String(), user.Email)
 }

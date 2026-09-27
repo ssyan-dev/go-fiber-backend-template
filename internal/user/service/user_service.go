@@ -23,6 +23,7 @@ type UserService interface {
 	Update(ctx context.Context, id string, email, curPassword, newPassword, avatarURL *string) error
 	Delete(ctx context.Context, id string) error
 	SetEmailVerified(ctx context.Context, id string) error
+	ResetPassword(ctx context.Context, id, newPassword string) error
 	CreateOAuthUser(ctx context.Context, email string, avatarURL *string) (*models.User, error)
 	LinkOAuthProvider(ctx context.Context, userID, provider, providerUserID, email string) error
 }
@@ -138,6 +139,26 @@ func (s *userSvc) SetEmailVerified(ctx context.Context, id string) error {
 	if err := s.repo.SetEmailVerified(ctx, id); err != nil {
 		return err
 	}
+	return s.redisRepo.DeleteUser(ctx, id)
+}
+
+func (s *userSvc) ResetPassword(ctx context.Context, id, newPassword string) error {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	newHash := string(hash)
+	user.PasswordHash = &newHash
+
+	if err := s.repo.Update(ctx, user); err != nil {
+		return err
+	}
+
 	return s.redisRepo.DeleteUser(ctx, id)
 }
 
