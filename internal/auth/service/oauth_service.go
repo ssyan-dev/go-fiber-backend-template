@@ -37,6 +37,7 @@ type oAuthSvc struct {
 	sessionSvc sessionService.SessionService
 	cfg        *config.OAuthConfig
 	jwtCfg     *config.JWTConfig
+	baseURL    string
 	l          *zap.Logger
 }
 
@@ -45,6 +46,7 @@ func NewOAuthService(
 	sessionSvc sessionService.SessionService,
 	jwtCfg *config.JWTConfig,
 	oauthCfg *config.OAuthConfig,
+	baseURL string,
 	l *zap.Logger,
 ) OAuthService {
 	return &oAuthSvc{
@@ -52,6 +54,7 @@ func NewOAuthService(
 		sessionSvc: sessionSvc,
 		jwtCfg:     jwtCfg,
 		cfg:        oauthCfg,
+		baseURL:    baseURL,
 		l:          l,
 	}
 }
@@ -134,7 +137,7 @@ func (s *oAuthSvc) getProviderConfig(provider string) (*oauth2.Config, error) {
 		return &oauth2.Config{
 			ClientID:     s.cfg.Google.ClientID,
 			ClientSecret: s.cfg.Google.ClientSecret,
-			RedirectURL:  s.cfg.Google.RedirectURL,
+			RedirectURL:  s.baseURL + "/auth/google/callback",
 			Endpoint:     google.Endpoint,
 			Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
 		}, nil
@@ -145,7 +148,7 @@ func (s *oAuthSvc) getProviderConfig(provider string) (*oauth2.Config, error) {
 		return &oauth2.Config{
 			ClientID:     s.cfg.GitHub.ClientID,
 			ClientSecret: s.cfg.GitHub.ClientSecret,
-			RedirectURL:  s.cfg.GitHub.RedirectURL,
+			RedirectURL:  s.baseURL + "/auth/github/callback",
 			Endpoint:     github.Endpoint,
 			Scopes:       []string{"user:email"},
 		}, nil
@@ -156,7 +159,7 @@ func (s *oAuthSvc) getProviderConfig(provider string) (*oauth2.Config, error) {
 		return &oauth2.Config{
 			ClientID:     s.cfg.Yandex.ClientID,
 			ClientSecret: s.cfg.Yandex.ClientSecret,
-			RedirectURL:  s.cfg.Yandex.RedirectURL,
+			RedirectURL:  s.baseURL + "/auth/yandex/callback",
 			Endpoint:     yandex.Endpoint,
 		}, nil
 	default:

@@ -20,6 +20,7 @@ type Config struct {
 type AppConfig struct {
 	Env           string `env:"APP_ENV" envDefault:"development"`
 	Port          int    `env:"APP_PORT" envDefault:"8080"`
+	URL           string `env:"APP_URL" envDefault:"localhost"`
 	GlobalPrefix  string `env:"APP_GLOBAL_PREFIX" envDefault:"/api/v1"`
 	AllowedOrigin string `env:"APP_ALLOWED_ORIGIN" envDefault:"http://localhost:3000"`
 }
@@ -40,8 +41,7 @@ type SMTPConfig struct {
 }
 
 type AuthConfig struct {
-	VerifyEmail             bool   `env:"AUTH_VERIFY_EMAIL" envDefault:"false"`
-	VerificationRedirectURL string `env:"AUTH_VERIFICATION_REDIRECT_URL" envDefault:"http://localhost:8080/api/v1/auth/verification"`
+	VerifyEmail bool `env:"AUTH_VERIFY_EMAIL" envDefault:"false"`
 }
 
 type OAuthConfig struct {
@@ -54,21 +54,18 @@ type GoogleOAuthConfig struct {
 	Enabled      bool   `env:"GOOGLE_OAUTH_ENABLED" envDefault:"false"`
 	ClientID     string `env:"GOOGLE_CLIENT_ID"`
 	ClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
-	RedirectURL  string `env:"GOOGLE_REDIRECT_URL"`
 }
 
 type GitHubOAuthConfig struct {
 	Enabled      bool   `env:"GITHUB_OAUTH_ENABLED" envDefault:"false"`
 	ClientID     string `env:"GITHUB_CLIENT_ID"`
 	ClientSecret string `env:"GITHUB_CLIENT_SECRET"`
-	RedirectURL  string `env:"GITHUB_REDIRECT_URL"`
 }
 
 type YandexOAuthConfig struct {
 	Enabled      bool   `env:"YANDEX_OAUTH_ENABLED" envDefault:"false"`
 	ClientID     string `env:"YANDEX_CLIENT_ID"`
 	ClientSecret string `env:"YANDEX_CLIENT_SECRET"`
-	RedirectURL  string `env:"YANDEX_REDIRECT_URL"`
 }
 
 type PostgresConfig struct {

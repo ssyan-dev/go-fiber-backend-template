@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 var (
 	IsProduction = true
 )
@@ -15,6 +17,17 @@ func (c *AppConfig) IsDevelopment() bool {
 
 func (c *AppConfig) IsProduction() bool {
 	return c.Env == "production"
+}
+
+func (c *AppConfig) AppURL() string {
+	if c.IsProduction() {
+		return "https://" + c.URL
+	}
+	return fmt.Sprintf("http://%s:%d", c.URL, c.Port)
+}
+
+func (c *AppConfig) BaseURL() string {
+	return c.AppURL() + c.GlobalPrefix
 }
 
 func (c *SMTPConfig) ConnectionType() string {

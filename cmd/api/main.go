@@ -85,10 +85,11 @@ func main() {
 		ErrorHandler: response.ErrorHandler,
 	})
 
+	baseURL := cfg.App.BaseURL()
+
 	l.Info("fiber initialized!",
-		zap.Int("port", cfg.App.Port),
+		zap.String("base_url", baseURL),
 		zap.String("allowed_origin", cfg.App.AllowedOrigin),
-		zap.String("global_prefix", cfg.App.GlobalPrefix),
 	)
 
 	app.Use(recover.New())
@@ -117,7 +118,7 @@ func main() {
 	uh := userHandler.NewUserHandler(us)
 
 	vcr := vcRepo.NewVerificationCodeRepository(pg)
-	vcs := vcService.NewVerificationCodeService(vcr, us, ms, cfg.Auth.VerificationRedirectURL, l)
+	vcs := vcService.NewVerificationCodeService(vcr, us, ms, baseURL, l)
 	vch := vcHandler.NewVerificationHandler(vcs)
 	vch.RegisterRoutes(api)
 
@@ -126,7 +127,7 @@ func main() {
 	ah.RegisterRoutes(api)
 
 	if cfg.OAuth.IsEnabled() {
-		oas := authService.NewOAuthService(us, ss, &cfg.JWT, &cfg.OAuth, l)
+		oas := authService.NewOAuthService(us, ss, &cfg.JWT, &cfg.OAuth, baseURL, l)
 		oah := authHandler.NewOAuthHandler(oas, as)
 		oah.RegisterRoutes(api)
 	}

@@ -45,14 +45,14 @@ func NewVerificationCodeService(
 	repo repository.VerificationCodeRepository,
 	userSvc userService.UserService,
 	mailerSvc mailerService.MailerService,
-	redirectURL string,
+	baseURL string,
 	l *zap.Logger,
 ) VerificationCodeService {
 	return &verificationCodeSvc{
 		repo:        repo,
 		userSvc:     userSvc,
 		mailerSvc:   mailerSvc,
-		redirectURL: redirectURL,
+		redirectURL: baseURL + "/verification",
 		l:           l,
 	}
 }
