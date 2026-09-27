@@ -1,5 +1,25 @@
 basePath: /api/v1
 definitions:
+  handler.adminUpdateUserReq:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      is_banned:
+        type: boolean
+      is_email_verified:
+        type: boolean
+      password:
+        minLength: 6
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/models.UserRole'
+        enum:
+        - default
+        - admin
+    type: object
   handler.forgotPasswordReq:
     properties:
       email:
@@ -72,6 +92,26 @@ definitions:
       code:
         type: string
     type: object
+  models.PaginatedUsersResponse:
+    properties:
+      meta:
+        $ref: '#/definitions/models.PaginationMeta'
+      users:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+    type: object
+  models.PaginationMeta:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   models.User:
     properties:
       avatar_url:
@@ -108,6 +148,115 @@ info:
   title: Backend API
   version: "1.0"
 paths:
+  /admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Get all users with filters
+      parameters:
+      - description: Number of page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search (email)
+        in: query
+        name: search
+        type: string
+      - description: Filter by role
+        in: query
+        name: role
+        type: string
+      - description: Filter by ban status
+        in: query
+        name: is_banned
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginatedUsersResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all users
+      tags:
+      - admin-users
+  /admin/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - admin-users
+    get:
+      consumes:
+      - application/json
+      description: Get user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - admin-users
+    patch:
+      consumes:
+      - application/json
+      description: Update user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update user dto
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.adminUpdateUserReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - admin-users
   /auth/forgot-password:
     post:
       consumes:

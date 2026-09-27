@@ -24,3 +24,23 @@ type User struct {
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
+
+type ListUsersFilter struct {
+	Search   *string
+	Role     *UserRole
+	IsBanned *bool
+	Page     int
+	Limit    int
+}
+
+type PaginationMeta struct {
+	Page       int   `json:"page"`
+	Limit      int   `json:"limit"`
+	Total      int64 `json:"total"`
+	TotalPages int   `json:"total_pages"`
+}
+
+type PaginatedUsersResponse struct {
+	Users []User         `json:"users"`
+	Meta  PaginationMeta `json:"meta"`
+}

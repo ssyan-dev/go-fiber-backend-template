@@ -2,7 +2,7 @@
 
 ## SOON:
 
-1. users --C--RUD for admin role
+1.
 
 ## NOT SOON
 

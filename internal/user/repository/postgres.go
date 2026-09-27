@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
@@ -11,6 +13,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	GetByID(ctx context.Context, id string) (*models.User, error)
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
+	List(ctx context.Context, filter models.ListUsersFilter) ([]models.User, int64, error)
 	Update(ctx context.Context, user *models.User) error
 	Delete(ctx context.Context, id string) error
 	SetEmailVerified(ctx context.Context, id string) error
@@ -66,10 +69,85 @@ func (r *userRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 	return &user, nil
 }
 
-func (r *userRepo) Update(ctx context.Context, user *models.User) error {
-	query := `UPDATE users SET email = $1, password_hash = $2, avatar_url = $3, is_email_verified = $4, updated_at = NOW() WHERE id = $5`
+func (r *userRepo) List(ctx context.Context, filter models.ListUsersFilter) ([]models.User, int64, error) {
+	where := []string{"1=1"}
+	args := []interface{}{}
+	argIdx := 1
 
-	_, err := r.db.Exec(ctx, query, user.Email, user.PasswordHash, user.AvatarURL, user.IsEmailVerified, user.ID.String())
+	if filter.Search != nil && *filter.Search != "" {
+		where = append(where, fmt.Sprintf("email ILIKE $%d", argIdx))
+		args = append(args, "%"+*filter.Search+"%")
+		argIdx++
+	}
+
+	if filter.Role != nil {
+		where = append(where, fmt.Sprintf("role = $%d", argIdx))
+		args = append(args, *filter.Role)
+		argIdx++
+	}
+
+	if filter.IsBanned != nil {
+		where = append(where, fmt.Sprintf("is_banned = $%d", argIdx))
+		args = append(args, *filter.IsBanned)
+		argIdx++
+	}
+
+	whereClause := strings.Join(where, " AND ")
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM users WHERE %s", whereClause)
+	var total int64
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+	page := filter.Page
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	dataQuery := fmt.Sprintf(`SELECT id, email, role, avatar_url, password_hash, is_banned, is_email_verified, created_at, updated_at
+		FROM users
+		WHERE %s
+		ORDER BY created_at DESC
+		LIMIT $%d OFFSET $%d`, whereClause, argIdx, argIdx+1)
+
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, dataQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	users := make([]models.User, 0)
+	for rows.Next() {
+		var user models.User
+		if err := rows.Scan(
+			&user.ID, &user.Email, &user.Role, &user.AvatarURL, &user.PasswordHash,
+			&user.IsBanned, &user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+func (r *userRepo) Update(ctx context.Context, user *models.User) error {
+	query := `UPDATE users SET email = $1, password_hash = $2, avatar_url = $3, is_email_verified = $4, role = $5, is_banned = $6, updated_at = NOW() WHERE id = $7`
+
+	_, err := r.db.Exec(ctx, query, user.Email, user.PasswordHash, user.AvatarURL, user.IsEmailVerified, user.Role, user.IsBanned, user.ID.String())
 	return err
 }
 

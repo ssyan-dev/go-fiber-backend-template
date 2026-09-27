@@ -19,6 +19,7 @@ import (
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/infra/mailer"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/logger"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/middleware"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/pkg/response"
 	sessionHandler "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/handler"
 	sessionRepo "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/repository"
@@ -113,7 +114,7 @@ func main() {
 
 	ur := userRepo.NewUserRepository(pg)
 	urr := userRepo.NewUserRedisRepository(rdb)
-	us := userService.NewUserService(ur, urr)
+	us := userService.NewUserService(ur, urr, ss)
 	uh := userHandler.NewUserHandler(us)
 
 	vcr := vcRepo.NewVerificationCodeRepository(pg)
@@ -143,7 +144,9 @@ func main() {
 	uh.RegisterRoutes(protected)
 	sh.RegisterRoutes(protected)
 
-	// admin := api.Group("/admin", middleware.AuthMiddleware(&cfg.JWT), middleware.RolesMiddleware("admin")) // example how to use role middleware
+	admin := api.Group("/admin", middleware.AuthMiddleware(&cfg.JWT), middleware.RolesMiddleware(string(models.RoleAdmin)))
+	auh := userHandler.NewAdminUserHandler(us)
+	auh.RegisterRoutes(admin)
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	go func() {
