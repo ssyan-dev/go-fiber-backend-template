@@ -2,7 +2,7 @@
 
 ## SOON:
 
-1.
+1. better swagger documentation
 
 ## NOT SOON
 
