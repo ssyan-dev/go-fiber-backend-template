@@ -2,9 +2,8 @@
 
 ## SOON:
 
-1. create templates and implement mailer to auth service (email verification)
-2. implement reset auth password (email verification!!)
-3. users --C--RUD for admin role
+1. implement reset auth password (email verification!!)
+2. users --C--RUD for admin role
 
 ## NOT SOON
 
