@@ -27,10 +27,12 @@ func (h *OAuthHandler) RegisterRoutes(api fiber.Router) {
 
 // getAuthURL godoc
 // @Summary		Get OAuth URL
-// @Description	Get redirect URL for OAuth provider
+// @Description	Get redirect URL for the specified OAuth provider (google, yandex, github). Redirects to the provider's authorization page
 // @Tags			auth
-// @Param			provider	path	string	true	"Provider (google/yandex/github)"
+// @Produce		json
+// @Param			provider	path	string	true	"OAuth provider"	Enums(google, yandex, github)
 // @Success		302
+// @Failure		400	{object}	response.ErrorResponse	"Unsupported provider"
 // @Router			/auth/oauth/{provider} [get]
 func (h *OAuthHandler) getAuthURL(c fiber.Ctx) error {
 	provider := c.Params("provider")
@@ -44,11 +46,14 @@ func (h *OAuthHandler) getAuthURL(c fiber.Ctx) error {
 
 // handleCallback godoc
 // @Summary		OAuth Callback
-// @Description	Handle OAuth provider callback
+// @Description	Handle OAuth provider callback after user authorization. Returns access token in body, sets refresh token as HTTP-only cookie
 // @Tags			auth
-// @Param			provider	path	string	true	"Provider (google, yandex, github)"
-// @Param			code		query	string	true	"OAuth code"
-// @Success		200
+// @Produce		json
+// @Param			provider	path	string	true	"OAuth provider"	Enums(google, yandex, github)
+// @Param			code		query	string	true	"OAuth authorization code"
+// @Success		200	{object}	response.TokenResponse
+// @Failure		400	{object}	response.ErrorResponse	"Code is required"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/oauth/{provider}/callback [get]
 func (h *OAuthHandler) handleCallback(c fiber.Ctx) error {
 	provider := c.Params("provider")

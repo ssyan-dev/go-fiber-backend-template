@@ -25,10 +25,14 @@ func (h *SessionHandler) RegisterRoutes(protected fiber.Router) {
 
 // getSessions godoc
 // @Summary		Get active sessions
-// @Description	Get active sessions
-// @Tags			auth
+// @Description	Get all active sessions of the authenticated user
+// @Tags			sessions
+// @Accept		json
+// @Produce		json
 // @Security		BearerAuth
-// @Success		200
+// @Success		200	{object}	response.UserResponse{data=[]models.Session}
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/sessions [get]
 func (h *SessionHandler) getSessions(c fiber.Ctx) error {
 	userID, ok := auth.GetMe(c)
@@ -46,11 +50,15 @@ func (h *SessionHandler) getSessions(c fiber.Ctx) error {
 
 // blockSession godoc
 // @Summary		Block session
-// @Description	Block session by ID
-// @Tags			auth
+// @Description	Block a specific session by its ID. The blocked session's tokens will be invalidated
+// @Tags			sessions
+// @Accept		json
+// @Produce		json
 // @Security		BearerAuth
-// @Param			sessionId	path	string	true	"Session ID"
-// @Success		200
+// @Param			sessionId	path	string	true	"Session ID (UUID)"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/sessions/{sessionId}/block [patch]
 func (h *SessionHandler) blockSession(c fiber.Ctx) error {
 	userID, ok := auth.GetMe(c)
@@ -68,11 +76,15 @@ func (h *SessionHandler) blockSession(c fiber.Ctx) error {
 
 // deleteSession godoc
 // @Summary		Delete session
-// @Description	Delete session by ID
-// @Tags			auth
+// @Description	Delete a specific session by its ID. This will immediately revoke the session
+// @Tags			sessions
+// @Accept		json
+// @Produce		json
 // @Security		BearerAuth
-// @Param			sessionId	path	string	true	"Session ID"
-// @Success		200
+// @Param			sessionId	path	string	true	"Session ID (UUID)"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/sessions/{sessionId} [delete]
 func (h *SessionHandler) deleteSession(c fiber.Ctx) error {
 	userID, ok := auth.GetMe(c)
@@ -90,10 +102,14 @@ func (h *SessionHandler) deleteSession(c fiber.Ctx) error {
 
 // deleteAllSessions godoc
 // @Summary		Delete all sessions
-// @Description	Delete all active sessions
-// @Tags			auth
+// @Description	Delete all active sessions of the authenticated user. This will revoke all tokens
+// @Tags			sessions
+// @Accept		json
+// @Produce		json
 // @Security		BearerAuth
-// @Success		200
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/sessions [delete]
 func (h *SessionHandler) deleteAllSessions(c fiber.Ctx) error {
 	userID, ok := auth.GetMe(c)

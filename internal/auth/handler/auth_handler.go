@@ -25,48 +25,47 @@ func (h *AuthHandler) RegisterRoutes(api fiber.Router) {
 	g.Post("/logout", h.logout)
 	g.Post("/refresh", h.refresh)
 	g.Get("/verify-email", h.verifyEmail)
-	g.Post("/verify-email", h.verifyEmail)
 	g.Post("/resend-email-verification", middleware.Validate[resendEmailVerificationReq](), h.resendEmailVerification)
 	g.Post("/forgot-password", middleware.Validate[forgotPasswordReq](), h.forgotPassword)
 	g.Post("/reset-password", middleware.Validate[resetPasswordReq](), h.resetPassword)
 }
 
 type registerReq struct {
-	Email           string `json:"email" validate:"required,email"`
-	Password        string `json:"password" validate:"required,min=6"`
-	PasswordConfirm string `json:"passwordConfirm" validate:"required,min=6"`
+	Email           string `json:"email" validate:"required,email" example:"user@example.com"`
+	Password        string `json:"password" validate:"required,min=6" example:"password123"`
+	PasswordConfirm string `json:"passwordConfirm" validate:"required,min=6" example:"password123"`
 }
 
 type loginReq struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-type verifyEmailReq struct {
-	Code string `json:"code"`
+	Email    string `json:"email" validate:"required,email" example:"user@example.com"`
+	Password string `json:"password" validate:"required" example:"password123"`
 }
 
 type resendEmailVerificationReq struct {
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"required,email" example:"user@example.com"`
 }
 
 type forgotPasswordReq struct {
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"required,email" example:"user@example.com"`
 }
 
 type resetPasswordReq struct {
-	Code            string `json:"code" validate:"required"`
-	Password        string `json:"password" validate:"required,min=6"`
-	PasswordConfirm string `json:"passwordConfirm" validate:"required,min=6"`
+	Code            string `json:"code" validate:"required" example:"123456"`
+	Password        string `json:"password" validate:"required,min=6" example:"newpassword123"`
+	PasswordConfirm string `json:"passwordConfirm" validate:"required,min=6" example:"newpassword123"`
 }
 
 // register godoc
 // @Summary		Register new user
-// @Description	Create a new user
+// @Description	Create a new user account with email and password. A verification email will be sent if SMTP enabled and configured
 // @Tags			auth
 // @Accept			json
 // @Produce		json
-// @Param			request	body		registerReq	true	"Register dto"
+// @Param			request	body		registerReq	true	"Register request"
+// @Success		201		{object}	response.UserResponse{data=models.User}
+// @Failure		400		{object}	response.ErrorResponse	"Passwords don't match"
+// @Failure		409		{object}	response.ErrorResponse	"User already exists"
+// @Failure		500		{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/register [post]
 func (h *AuthHandler) register(c fiber.Ctx) error {
 	req := c.Locals("body").(registerReq)
@@ -88,13 +87,13 @@ func (h *AuthHandler) register(c fiber.Ctx) error {
 
 // login godoc
 // @Summary		Login user
-// @Description	Login user
+// @Description	Authenticate user by email and password. Returns access token in body, sets refresh token as HTTP-only cookie
 // @Tags			auth
 // @Accept			json
 // @Produce		json
-// @Param			request	body		loginReq	true	"login dto"
-// @Success		200
-// @Failure		401
+// @Param			request	body		loginReq	true	"Login request"
+// @Success		200		{object}	response.TokenResponse
+// @Failure		401		{object}	response.ErrorResponse	"Invalid credentials"
 // @Router			/auth/login [post]
 func (h *AuthHandler) login(c fiber.Ctx) error {
 	req := c.Locals("body").(loginReq)
@@ -113,12 +112,12 @@ func (h *AuthHandler) login(c fiber.Ctx) error {
 
 // refresh godoc
 // @Summary		Refresh JWT tokens
-// @Description	Refresh JWT tokens
+// @Description	Issue new access and refresh tokens using the refresh token from HTTP-only cookie
 // @Tags			auth
 // @Accept			json
 // @Produce		json
-// @Success		200
-// @Failure		401
+// @Success		200	{object}	response.TokenResponse
+// @Failure		401	{object}	response.ErrorResponse	"Refresh token not found or invalid"
 // @Router			/auth/refresh [post]
 func (h *AuthHandler) refresh(c fiber.Ctx) error {
 	refreshToken := cookie.GetCookie(c, cookie.RefreshToken)
@@ -140,12 +139,12 @@ func (h *AuthHandler) refresh(c fiber.Ctx) error {
 
 // logout godoc
 // @Summary		Logout user
-// @Description	Logout user
+// @Description	Revoke current session and clear refresh token cookie
 // @Tags			auth
 // @Accept			json
 // @Produce		json
-// @Success		200
-// @Failure		401
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
 // @Router			/auth/logout [post]
 func (h *AuthHandler) logout(c fiber.Ctx) error {
 	refreshToken := cookie.GetCookie(c, cookie.RefreshToken)
@@ -159,26 +158,16 @@ func (h *AuthHandler) logout(c fiber.Ctx) error {
 
 // verifyEmail godoc
 // @Summary		Verify email
-// @Description	Verify email address using verification code
+// @Description	Verify email address using a verification code passed as a query parameter
 // @Tags			auth
-// @Accept		json
 // @Produce		json
-// @Param			code	query		string			false	"Verification code"
-// @Param			request	body		verifyEmailReq	false	"Verification code dto"
-// @Success		200
-// @Failure		400
-// @Failure		500
+// @Param			code	query		string	true	"Verification code"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		400	{object}	response.ErrorResponse	"Code is required or invalid"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/verify-email [get]
-// @Router			/auth/verify-email [post]
 func (h *AuthHandler) verifyEmail(c fiber.Ctx) error {
 	code := c.Query("code")
-	if code == "" {
-		var req verifyEmailReq
-		if err := c.Bind().Body(&req); err == nil {
-			code = req.Code
-		}
-	}
-
 	if code == "" {
 		return response.Error(c, fiber.StatusBadRequest, "code is required", nil)
 	}
@@ -195,15 +184,15 @@ func (h *AuthHandler) verifyEmail(c fiber.Ctx) error {
 
 // resendEmailVerification godoc
 // @Summary		Resend email verification code
-// @Description	Resend email verification code to user email
+// @Description	Resend a new verification code to the specified email address
 // @Tags			auth
 // @Accept		json
 // @Produce		json
-// @Param			request	body		resendEmailVerificationReq	true	"Resend email verification dto"
-// @Success		200
-// @Failure		400
-// @Failure		404
-// @Failure		500
+// @Param			request	body		resendEmailVerificationReq	true	"Resend verification request"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		400	{object}	response.ErrorResponse	"Email already verified"
+// @Failure		404	{object}	response.ErrorResponse	"User not found"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/resend-email-verification [post]
 func (h *AuthHandler) resendEmailVerification(c fiber.Ctx) error {
 	req := c.Locals("body").(resendEmailVerificationReq)
@@ -223,15 +212,14 @@ func (h *AuthHandler) resendEmailVerification(c fiber.Ctx) error {
 
 // forgotPassword godoc
 // @Summary		Forgot password
-// @Description	Send code to email
+// @Description	Send a password reset code to the specified email address
 // @Tags			auth
 // @Accept			json
 // @Produce		json
-// @Param			request	body		forgotPasswordReq	true	"Forgot password dto"
-// @Success		200
-// @Failure		400
-// @Failure		404
-// @Failure		500
+// @Param			request	body		forgotPasswordReq	true	"Forgot password request"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		404	{object}	response.ErrorResponse	"User not found"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/forgot-password [post]
 func (h *AuthHandler) forgotPassword(c fiber.Ctx) error {
 	req := c.Locals("body").(forgotPasswordReq)
@@ -248,14 +236,14 @@ func (h *AuthHandler) forgotPassword(c fiber.Ctx) error {
 
 // resetPassword godoc
 // @Summary		Reset password
-// @Description	Reset password via code
+// @Description	Reset user password using a verification code sent via email
 // @Tags			auth
 // @Accept			json
 // @Produce		json
-// @Param			request	body		resetPasswordReq	true	"Reset password dto"
-// @Success		200
-// @Failure		400
-// @Failure		500
+// @Param			request	body		resetPasswordReq	true	"Reset password request"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		400	{object}	response.ErrorResponse	"Passwords don't match or invalid code"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/auth/reset-password [post]
 func (h *AuthHandler) resetPassword(c fiber.Ctx) error {
 	req := c.Locals("body").(resetPasswordReq)

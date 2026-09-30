@@ -37,27 +37,30 @@ type listUsersQuery struct {
 }
 
 type adminUpdateUserReq struct {
-	Email           *string          `json:"email" validate:"omitempty,email"`
-	Role            *models.UserRole `json:"role" validate:"omitempty,oneof=default admin"`
-	Password        *string          `json:"password" validate:"omitempty,min=6"`
-	AvatarURL       *string          `json:"avatar_url" validate:"omitempty,url"`
-	IsBanned        *bool            `json:"is_banned" validate:"omitempty"`
-	IsEmailVerified *bool            `json:"is_email_verified" validate:"omitempty"`
+	Email           *string          `json:"email" validate:"omitempty,email" example:"admin@example.com"`
+	Role            *models.UserRole `json:"role" validate:"omitempty,oneof=default admin" example:"admin"`
+	Password        *string          `json:"password" validate:"omitempty,min=6" example:"newpassword123"`
+	AvatarURL       *string          `json:"avatar_url" validate:"omitempty,url" example:"https://example.com/avatar.png"`
+	IsBanned        *bool            `json:"is_banned" validate:"omitempty" example:"false"`
+	IsEmailVerified *bool            `json:"is_email_verified" validate:"omitempty" example:"true"`
 }
 
 // listUsers godoc
-// @Summary		Get all users
-// @Description	Get all users with filters
+// @Summary		List all users
+// @Description	Get a paginated list of users with optional filters by search, role, and ban status. Requires admin role
 // @Tags			admin-users
 // @Accept		json
 // @Produce		json
 // @Security	BearerAuth
-// @Param			page		query		int		false	"Number of page"
-// @Param			limit		query		int		false	"Items per page"
-// @Param			search		query		string	false	"Search (email)"
-// @Param			role		query		string	false	"Filter by role"
+// @Param			page		query		int		false	"Page number (default: 1)"		minimum(1)
+// @Param			limit		query		int		false	"Items per page (default: 10)"	minimum(1)	maximum(100)
+// @Param			search		query		string	false	"Search by email"
+// @Param			role		query		string	false	"Filter by role"	Enums(default, admin)
 // @Param			is_banned	query		bool	false	"Filter by ban status"
-// @Success		200			{object}	models.PaginatedUsersResponse
+// @Success		200			{object}	response.UserResponse{data=models.PaginatedUsersResponse}
+// @Failure		401			{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		403			{object}	response.ErrorResponse	"Forbidden"
+// @Failure		500			{object}	response.ErrorResponse	"Internal server error"
 // @Router		/admin/users [get]
 func (h *AdminUserHandler) listUsers(c fiber.Ctx) error {
 	query := c.Locals("query").(listUsersQuery)
@@ -102,13 +105,17 @@ func (h *AdminUserHandler) listUsers(c fiber.Ctx) error {
 
 // getUserByID godoc
 // @Summary		Get user by ID
-// @Description	Get user by ID
+// @Description	Get a specific user by their UUID. Requires admin role
 // @Tags			admin-users
 // @Accept		json
 // @Produce		json
 // @Security	BearerAuth
-// @Param			id	path		string	true	"User ID"
-// @Success		200	{object}	models.User
+// @Param			id	path		string	true	"User ID (UUID)"
+// @Success		200	{object}	response.UserResponse{data=models.User}
+// @Failure		400	{object}	response.ErrorResponse	"Invalid user ID"
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		403	{object}	response.ErrorResponse	"Forbidden"
+// @Failure		404	{object}	response.ErrorResponse	"User not found"
 // @Router		/admin/users/{id} [get]
 func (h *AdminUserHandler) getUserByID(c fiber.Ctx) error {
 	id := c.Params("id")
@@ -126,14 +133,20 @@ func (h *AdminUserHandler) getUserByID(c fiber.Ctx) error {
 
 // updateUser godoc
 // @Summary		Update user
-// @Description	Update user by ID
+// @Description	Update a user's profile by their UUID. Admins cannot demote or ban themselves. Requires admin role
 // @Tags			admin-users
 // @Accept			json
 // @Produce		json
 // @Security		BearerAuth
-// @Param			id		path		string				true	"User ID"
-// @Param			request	body		adminUpdateUserReq	true	"Update user dto"
-// @Success		200		{object}	models.User
+// @Param			id		path		string				true	"User ID (UUID)"
+// @Param			request	body		adminUpdateUserReq	true	"Update user request"
+// @Success		200		{object}	response.UserResponse{data=models.User}
+// @Failure		400		{object}	response.ErrorResponse	"Cannot demote/ban yourself or invalid input"
+// @Failure		401		{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		403		{object}	response.ErrorResponse	"Forbidden"
+// @Failure		404		{object}	response.ErrorResponse	"User not found"
+// @Failure		409		{object}	response.ErrorResponse	"Email already taken"
+// @Failure		500		{object}	response.ErrorResponse	"Internal server error"
 // @Router		/admin/users/{id} [patch]
 func (h *AdminUserHandler) updateUser(c fiber.Ctx) error {
 	targetID := c.Params("id")
@@ -176,13 +189,18 @@ func (h *AdminUserHandler) updateUser(c fiber.Ctx) error {
 
 // deleteUser godoc
 // @Summary		Delete user
-// @Description	Delete user by ID
+// @Description	Delete a user by their UUID. Admins cannot delete themselves. Requires admin role
 // @Tags			admin-users
 // @Accept		json
 // @Produce		json
 // @Security	BearerAuth
-// @Param			id	path	string	true	"User ID"
-// @Success		200
+// @Param			id	path	string	true	"User ID (UUID)"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		400	{object}	response.ErrorResponse	"Cannot delete yourself"
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		403	{object}	response.ErrorResponse	"Forbidden"
+// @Failure		404	{object}	response.ErrorResponse	"User not found"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router		/admin/users/{id} [delete]
 func (h *AdminUserHandler) deleteUser(c fiber.Ctx) error {
 	targetID := c.Params("id")

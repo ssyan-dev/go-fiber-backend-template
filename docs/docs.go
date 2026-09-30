@@ -25,7 +25,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all users with filters",
+                "description": "Get a paginated list of users with optional filters by search, role, and ban status. Requires admin role",
                 "consumes": [
                     "application/json"
                 ],
@@ -35,27 +35,34 @@ const docTemplate = `{
                 "tags": [
                     "admin-users"
                 ],
-                "summary": "Get all users",
+                "summary": "List all users",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Number of page",
+                        "description": "Page number (default: 1)",
                         "name": "page",
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Items per page",
+                        "description": "Items per page (default: 10)",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Search (email)",
+                        "description": "Search by email",
                         "name": "search",
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "default",
+                            "admin"
+                        ],
                         "type": "string",
                         "description": "Filter by role",
                         "name": "role",
@@ -72,7 +79,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.PaginatedUsersResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.UserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.PaginatedUsersResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -85,7 +122,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get user by ID",
+                "description": "Get a specific user by their UUID. Requires admin role",
                 "consumes": [
                     "application/json"
                 ],
@@ -99,7 +136,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User ID",
+                        "description": "User ID (UUID)",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -109,7 +146,43 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.UserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -120,7 +193,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete user by ID",
+                "description": "Delete a user by their UUID. Admins cannot delete themselves. Requires admin role",
                 "consumes": [
                     "application/json"
                 ],
@@ -134,7 +207,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User ID",
+                        "description": "User ID (UUID)",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -142,7 +215,40 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Cannot delete yourself",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -152,7 +258,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update user by ID",
+                "description": "Update a user's profile by their UUID. Admins cannot demote or ban themselves. Requires admin role",
                 "consumes": [
                     "application/json"
                 ],
@@ -166,13 +272,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User ID",
+                        "description": "User ID (UUID)",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Update user dto",
+                        "description": "Update user request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -185,7 +291,55 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.UserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Cannot demote/ban yourself or invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Email already taken",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -193,7 +347,7 @@ const docTemplate = `{
         },
         "/auth/forgot-password": {
             "post": {
-                "description": "Send code to email",
+                "description": "Send a password reset code to the specified email address",
                 "consumes": [
                     "application/json"
                 ],
@@ -206,7 +360,7 @@ const docTemplate = `{
                 "summary": "Forgot password",
                 "parameters": [
                     {
-                        "description": "Forgot password dto",
+                        "description": "Forgot password request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -217,23 +371,29 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
                     },
                     "404": {
-                        "description": "Not Found"
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/login": {
             "post": {
-                "description": "Login user",
+                "description": "Authenticate user by email and password. Returns access token in body, sets refresh token as HTTP-only cookie",
                 "consumes": [
                     "application/json"
                 ],
@@ -246,7 +406,7 @@ const docTemplate = `{
                 "summary": "Login user",
                 "parameters": [
                     {
-                        "description": "login dto",
+                        "description": "Login request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -257,17 +417,23 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.TokenResponse"
+                        }
                     },
                     "401": {
-                        "description": "Unauthorized"
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/logout": {
             "post": {
-                "description": "Logout user",
+                "description": "Revoke current session and clear refresh token cookie",
                 "consumes": [
                     "application/json"
                 ],
@@ -280,25 +446,39 @@ const docTemplate = `{
                 "summary": "Logout user",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
                     },
                     "401": {
-                        "description": "Unauthorized"
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/oauth/{provider}": {
             "get": {
-                "description": "Get redirect URL for OAuth provider",
+                "description": "Get redirect URL for the specified OAuth provider (google, yandex, github). Redirects to the provider's authorization page",
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "auth"
                 ],
                 "summary": "Get OAuth URL",
                 "parameters": [
                     {
+                        "enum": [
+                            "google",
+                            "yandex",
+                            "github"
+                        ],
                         "type": "string",
-                        "description": "Provider (google/yandex/github)",
+                        "description": "OAuth provider",
                         "name": "provider",
                         "in": "path",
                         "required": true
@@ -307,28 +487,42 @@ const docTemplate = `{
                 "responses": {
                     "302": {
                         "description": "Found"
+                    },
+                    "400": {
+                        "description": "Unsupported provider",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/oauth/{provider}/callback": {
             "get": {
-                "description": "Handle OAuth provider callback",
+                "description": "Handle OAuth provider callback after user authorization. Returns access token in body, sets refresh token as HTTP-only cookie",
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "auth"
                 ],
                 "summary": "OAuth Callback",
                 "parameters": [
                     {
+                        "enum": [
+                            "google",
+                            "yandex",
+                            "github"
+                        ],
                         "type": "string",
-                        "description": "Provider (google, yandex, github)",
+                        "description": "OAuth provider",
                         "name": "provider",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "OAuth code",
+                        "description": "OAuth authorization code",
                         "name": "code",
                         "in": "query",
                         "required": true
@@ -336,14 +530,29 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Code is required",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/refresh": {
             "post": {
-                "description": "Refresh JWT tokens",
+                "description": "Issue new access and refresh tokens using the refresh token from HTTP-only cookie",
                 "consumes": [
                     "application/json"
                 ],
@@ -356,17 +565,23 @@ const docTemplate = `{
                 "summary": "Refresh JWT tokens",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.TokenResponse"
+                        }
                     },
                     "401": {
-                        "description": "Unauthorized"
+                        "description": "Refresh token not found or invalid",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/register": {
             "post": {
-                "description": "Create a new user",
+                "description": "Create a new user account with email and password. A verification email will be sent if SMTP enabled and configured",
                 "consumes": [
                     "application/json"
                 ],
@@ -379,7 +594,7 @@ const docTemplate = `{
                 "summary": "Register new user",
                 "parameters": [
                     {
-                        "description": "Register dto",
+                        "description": "Register request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -388,12 +603,49 @@ const docTemplate = `{
                         }
                     }
                 ],
-                "responses": {}
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.UserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Passwords don't match",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "User already exists",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/auth/resend-email-verification": {
             "post": {
-                "description": "Resend email verification code to user email",
+                "description": "Resend a new verification code to the specified email address",
                 "consumes": [
                     "application/json"
                 ],
@@ -406,7 +658,7 @@ const docTemplate = `{
                 "summary": "Resend email verification code",
                 "parameters": [
                     {
-                        "description": "Resend email verification dto",
+                        "description": "Resend verification request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -417,23 +669,35 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "description": "Email already verified",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     },
                     "404": {
-                        "description": "Not Found"
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/reset-password": {
             "post": {
-                "description": "Reset password via code",
+                "description": "Reset user password using a verification code sent via email",
                 "consumes": [
                     "application/json"
                 ],
@@ -446,7 +710,7 @@ const docTemplate = `{
                 "summary": "Reset password",
                 "parameters": [
                     {
-                        "description": "Reset password dto",
+                        "description": "Reset password request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -457,13 +721,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "description": "Passwords don't match or invalid code",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -475,14 +748,50 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get active sessions",
+                "description": "Get all active sessions of the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
-                    "auth"
+                    "sessions"
                 ],
                 "summary": "Get active sessions",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.UserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.Session"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -492,14 +801,35 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete all active sessions",
+                "description": "Delete all active sessions of the authenticated user. This will revoke all tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
-                    "auth"
+                    "sessions"
                 ],
                 "summary": "Delete all sessions",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -511,15 +841,21 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete session by ID",
+                "description": "Delete a specific session by its ID. This will immediately revoke the session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
-                    "auth"
+                    "sessions"
                 ],
                 "summary": "Delete session",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Session ID",
+                        "description": "Session ID (UUID)",
                         "name": "sessionId",
                         "in": "path",
                         "required": true
@@ -527,7 +863,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -539,15 +890,21 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Block session by ID",
+                "description": "Block a specific session by its ID. The blocked session's tokens will be invalidated",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
-                    "auth"
+                    "sessions"
                 ],
                 "summary": "Block session",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Session ID",
+                        "description": "Session ID (UUID)",
                         "name": "sessionId",
                         "in": "path",
                         "required": true
@@ -555,17 +912,29 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/auth/verify-email": {
             "get": {
-                "description": "Verify email address using verification code",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Verify email address using a verification code passed as a query parameter",
                 "produces": [
                     "application/json"
                 ],
@@ -578,66 +947,48 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Verification code",
                         "name": "code",
-                        "in": "query"
-                    },
-                    {
-                        "description": "Verification code dto",
-                        "name": "request",
-                        "in": "body",
-                        "schema": {
-                            "$ref": "#/definitions/handler.verifyEmailReq"
-                        }
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "description": "Code is required or invalid",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
-            },
-            "post": {
-                "description": "Verify email address using verification code",
-                "consumes": [
-                    "application/json"
-                ],
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check if the server is running and return the current environment",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "auth"
+                    "system"
                 ],
-                "summary": "Verify email",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Verification code",
-                        "name": "code",
-                        "in": "query"
-                    },
-                    {
-                        "description": "Verification code dto",
-                        "name": "request",
-                        "in": "body",
-                        "schema": {
-                            "$ref": "#/definitions/handler.verifyEmailReq"
-                        }
-                    }
-                ],
+                "summary": "Health check",
                 "responses": {
                     "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    },
-                    "500": {
-                        "description": "Internal Server Error"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.HealthResponse"
+                        }
                     }
                 }
             }
@@ -649,7 +1000,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get self",
+                "description": "Get the authenticated user's profile information",
                 "consumes": [
                     "application/json"
                 ],
@@ -659,12 +1010,36 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Get self",
+                "summary": "Get current user",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.UserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -675,7 +1050,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update self",
+                "description": "Update the authenticated user's profile",
                 "consumes": [
                     "application/json"
                 ],
@@ -685,10 +1060,10 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Update self",
+                "summary": "Update current user",
                 "parameters": [
                     {
-                        "description": "Update dto",
+                        "description": "Update profile request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -699,7 +1074,28 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid current password or password required",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -710,20 +1106,25 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "avatar_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://example.com/avatar.png"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "admin@example.com"
                 },
                 "is_banned": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": false
                 },
                 "is_email_verified": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "newpassword123"
                 },
                 "role": {
                     "enum": [
@@ -734,7 +1135,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/models.UserRole"
                         }
-                    ]
+                    ],
+                    "example": "admin"
                 }
             }
         },
@@ -745,7 +1147,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 }
             }
         },
@@ -757,10 +1160,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "password123"
                 }
             }
         },
@@ -773,15 +1178,18 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "password123"
                 },
                 "passwordConfirm": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "password123"
                 }
             }
         },
@@ -792,7 +1200,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 }
             }
         },
@@ -805,15 +1214,18 @@ const docTemplate = `{
             ],
             "properties": {
                 "code": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123456"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "newpassword123"
                 },
                 "passwordConfirm": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "newpassword123"
                 }
             }
         },
@@ -821,26 +1233,22 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "avatar_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://example.com/avatar.png"
                 },
                 "current_password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "oldpassword123"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "newemail@example.com"
                 },
                 "new_password": {
                     "type": "string",
-                    "minLength": 6
-                }
-            }
-        },
-        "handler.verifyEmailReq": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
+                    "minLength": 6,
+                    "example": "newpassword123"
                 }
             }
         },
@@ -872,6 +1280,32 @@ const docTemplate = `{
                 },
                 "total_pages": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.Session": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "is_blocked": {
+                    "type": "boolean"
+                },
+                "user_agent": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -914,6 +1348,96 @@ const docTemplate = `{
                 "RoleDefault",
                 "RoleAdmin"
             ]
+        },
+        "response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "error description"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "response.HealthData": {
+            "type": "object",
+            "properties": {
+                "env": {
+                    "type": "string",
+                    "example": "development"
+                }
+            }
+        },
+        "response.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.HealthData"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "server is healthy!"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "response.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "operation successful"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "response.TokenData": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                }
+            }
+        },
+        "response.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.TokenData"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "login successful"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "response.UserResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
         }
     },
     "securityDefinitions": {

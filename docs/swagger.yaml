@@ -3,14 +3,19 @@ definitions:
   handler.adminUpdateUserReq:
     properties:
       avatar_url:
+        example: https://example.com/avatar.png
         type: string
       email:
+        example: admin@example.com
         type: string
       is_banned:
+        example: false
         type: boolean
       is_email_verified:
+        example: true
         type: boolean
       password:
+        example: newpassword123
         minLength: 6
         type: string
       role:
@@ -19,10 +24,12 @@ definitions:
         enum:
         - default
         - admin
+        example: admin
     type: object
   handler.forgotPasswordReq:
     properties:
       email:
+        example: user@example.com
         type: string
     required:
     - email
@@ -30,8 +37,10 @@ definitions:
   handler.loginReq:
     properties:
       email:
+        example: user@example.com
         type: string
       password:
+        example: password123
         type: string
     required:
     - email
@@ -40,11 +49,14 @@ definitions:
   handler.registerReq:
     properties:
       email:
+        example: user@example.com
         type: string
       password:
+        example: password123
         minLength: 6
         type: string
       passwordConfirm:
+        example: password123
         minLength: 6
         type: string
     required:
@@ -55,6 +67,7 @@ definitions:
   handler.resendEmailVerificationReq:
     properties:
       email:
+        example: user@example.com
         type: string
     required:
     - email
@@ -62,11 +75,14 @@ definitions:
   handler.resetPasswordReq:
     properties:
       code:
+        example: "123456"
         type: string
       password:
+        example: newpassword123
         minLength: 6
         type: string
       passwordConfirm:
+        example: newpassword123
         minLength: 6
         type: string
     required:
@@ -77,19 +93,18 @@ definitions:
   handler.updateUserReq:
     properties:
       avatar_url:
+        example: https://example.com/avatar.png
         type: string
       current_password:
+        example: oldpassword123
         minLength: 6
         type: string
       email:
+        example: newemail@example.com
         type: string
       new_password:
+        example: newpassword123
         minLength: 6
-        type: string
-    type: object
-  handler.verifyEmailReq:
-    properties:
-      code:
         type: string
     type: object
   models.PaginatedUsersResponse:
@@ -111,6 +126,23 @@ definitions:
         type: integer
       total_pages:
         type: integer
+    type: object
+  models.Session:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      ip:
+        type: string
+      is_blocked:
+        type: boolean
+      user_agent:
+        type: string
+      user_id:
+        type: string
     type: object
   models.User:
     properties:
@@ -139,6 +171,68 @@ definitions:
     x-enum-varnames:
     - RoleDefault
     - RoleAdmin
+  response.ErrorResponse:
+    properties:
+      message:
+        example: error description
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  response.HealthData:
+    properties:
+      env:
+        example: development
+        type: string
+    type: object
+  response.HealthResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.HealthData'
+      message:
+        example: server is healthy!
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  response.SuccessResponse:
+    properties:
+      message:
+        example: operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  response.TokenData:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    type: object
+  response.TokenResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.TokenData'
+      message:
+        example: login successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  response.UserResponse:
+    properties:
+      data: {}
+      message:
+        example: success
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -152,21 +246,28 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all users with filters
+      description: Get a paginated list of users with optional filters by search,
+        role, and ban status. Requires admin role
       parameters:
-      - description: Number of page
+      - description: 'Page number (default: 1)'
         in: query
+        minimum: 1
         name: page
         type: integer
-      - description: Items per page
+      - description: 'Items per page (default: 10)'
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
-      - description: Search (email)
+      - description: Search by email
         in: query
         name: search
         type: string
       - description: Filter by role
+        enum:
+        - default
+        - admin
         in: query
         name: role
         type: string
@@ -180,39 +281,37 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.PaginatedUsersResponse'
+            allOf:
+            - $ref: '#/definitions/response.UserResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.PaginatedUsersResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get all users
+      summary: List all users
       tags:
       - admin-users
   /admin/users/{id}:
     delete:
       consumes:
       - application/json
-      description: Delete user by ID
+      description: Delete a user by their UUID. Admins cannot delete themselves. Requires
+        admin role
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-      security:
-      - BearerAuth: []
-      summary: Delete user
-      tags:
-      - admin-users
-    get:
-      consumes:
-      - application/json
-      description: Get user by ID
-      parameters:
-      - description: User ID
+      - description: User ID (UUID)
         in: path
         name: id
         required: true
@@ -223,7 +322,70 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Cannot delete yourself
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - admin-users
+    get:
+      consumes:
+      - application/json
+      description: Get a specific user by their UUID. Requires admin role
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.UserResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user by ID
@@ -232,14 +394,15 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Update user by ID
+      description: Update a user's profile by their UUID. Admins cannot demote or
+        ban themselves. Requires admin role
       parameters:
-      - description: User ID
+      - description: User ID (UUID)
         in: path
         name: id
         required: true
         type: string
-      - description: Update user dto
+      - description: Update user request
         in: body
         name: request
         required: true
@@ -251,7 +414,36 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            allOf:
+            - $ref: '#/definitions/response.UserResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Cannot demote/ban yourself or invalid input
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: Email already taken
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update user
@@ -261,9 +453,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Send code to email
+      description: Send a password reset code to the specified email address
       parameters:
-      - description: Forgot password dto
+      - description: Forgot password request
         in: body
         name: request
         required: true
@@ -274,12 +466,16 @@ paths:
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
         "404":
-          description: Not Found
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Forgot password
       tags:
       - auth
@@ -287,9 +483,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Login user
+      description: Authenticate user by email and password. Returns access token in
+        body, sets refresh token as HTTP-only cookie
       parameters:
-      - description: login dto
+      - description: Login request
         in: body
         name: request
         required: true
@@ -300,8 +497,12 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
         "401":
-          description: Unauthorized
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Login user
       tags:
       - auth
@@ -309,49 +510,81 @@ paths:
     post:
       consumes:
       - application/json
-      description: Logout user
+      description: Revoke current session and clear refresh token cookie
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
         "401":
           description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Logout user
       tags:
       - auth
   /auth/oauth/{provider}:
     get:
-      description: Get redirect URL for OAuth provider
+      description: Get redirect URL for the specified OAuth provider (google, yandex,
+        github). Redirects to the provider's authorization page
       parameters:
-      - description: Provider (google/yandex/github)
+      - description: OAuth provider
+        enum:
+        - google
+        - yandex
+        - github
         in: path
         name: provider
         required: true
         type: string
+      produces:
+      - application/json
       responses:
         "302":
           description: Found
+        "400":
+          description: Unsupported provider
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Get OAuth URL
       tags:
       - auth
   /auth/oauth/{provider}/callback:
     get:
-      description: Handle OAuth provider callback
+      description: Handle OAuth provider callback after user authorization. Returns
+        access token in body, sets refresh token as HTTP-only cookie
       parameters:
-      - description: Provider (google, yandex, github)
+      - description: OAuth provider
+        enum:
+        - google
+        - yandex
+        - github
         in: path
         name: provider
         required: true
         type: string
-      - description: OAuth code
+      - description: OAuth authorization code
         in: query
         name: code
         required: true
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
+        "400":
+          description: Code is required
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: OAuth Callback
       tags:
       - auth
@@ -359,14 +592,19 @@ paths:
     post:
       consumes:
       - application/json
-      description: Refresh JWT tokens
+      description: Issue new access and refresh tokens using the refresh token from
+        HTTP-only cookie
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
         "401":
-          description: Unauthorized
+          description: Refresh token not found or invalid
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Refresh JWT tokens
       tags:
       - auth
@@ -374,9 +612,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new user
+      description: Create a new user account with email and password. A verification
+        email will be sent if SMTP enabled and configured
       parameters:
-      - description: Register dto
+      - description: Register request
         in: body
         name: request
         required: true
@@ -384,7 +623,28 @@ paths:
           $ref: '#/definitions/handler.registerReq'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.UserResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Passwords don't match
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: User already exists
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Register new user
       tags:
       - auth
@@ -392,9 +652,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Resend email verification code to user email
+      description: Resend a new verification code to the specified email address
       parameters:
-      - description: Resend email verification dto
+      - description: Resend verification request
         in: body
         name: request
         required: true
@@ -405,12 +665,20 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
         "400":
-          description: Bad Request
+          description: Email already verified
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
         "404":
-          description: Not Found
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Resend email verification code
       tags:
       - auth
@@ -418,9 +686,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Reset password via code
+      description: Reset user password using a verification code sent via email
       parameters:
-      - description: Reset password dto
+      - description: Reset password request
         in: body
         name: request
         required: true
@@ -431,144 +699,217 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
         "400":
-          description: Bad Request
+          description: Passwords don't match or invalid code
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Reset password
       tags:
       - auth
   /auth/sessions:
     delete:
-      description: Delete all active sessions
-      responses:
-        "200":
-          description: OK
-      security:
-      - BearerAuth: []
-      summary: Delete all sessions
-      tags:
-      - auth
-    get:
-      description: Get active sessions
-      responses:
-        "200":
-          description: OK
-      security:
-      - BearerAuth: []
-      summary: Get active sessions
-      tags:
-      - auth
-  /auth/sessions/{sessionId}:
-    delete:
-      description: Delete session by ID
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-      security:
-      - BearerAuth: []
-      summary: Delete session
-      tags:
-      - auth
-  /auth/sessions/{sessionId}/block:
-    patch:
-      description: Block session by ID
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-      security:
-      - BearerAuth: []
-      summary: Block session
-      tags:
-      - auth
-  /auth/verify-email:
-    get:
       consumes:
       - application/json
-      description: Verify email address using verification code
-      parameters:
-      - description: Verification code
-        in: query
-        name: code
-        type: string
-      - description: Verification code dto
-        in: body
-        name: request
-        schema:
-          $ref: '#/definitions/handler.verifyEmailReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-        "500":
-          description: Internal Server Error
-      summary: Verify email
-      tags:
-      - auth
-    post:
-      consumes:
-      - application/json
-      description: Verify email address using verification code
-      parameters:
-      - description: Verification code
-        in: query
-        name: code
-        type: string
-      - description: Verification code dto
-        in: body
-        name: request
-        schema:
-          $ref: '#/definitions/handler.verifyEmailReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-        "500":
-          description: Internal Server Error
-      summary: Verify email
-      tags:
-      - auth
-  /users/me:
-    get:
-      consumes:
-      - application/json
-      description: Get self
+      description: Delete all active sessions of the authenticated user. This will
+        revoke all tokens
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            $ref: '#/definitions/response.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get self
+      summary: Delete all sessions
+      tags:
+      - sessions
+    get:
+      consumes:
+      - application/json
+      description: Get all active sessions of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.UserResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Session'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get active sessions
+      tags:
+      - sessions
+  /auth/sessions/{sessionId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific session by its ID. This will immediately revoke
+        the session
+      parameters:
+      - description: Session ID (UUID)
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete session
+      tags:
+      - sessions
+  /auth/sessions/{sessionId}/block:
+    patch:
+      consumes:
+      - application/json
+      description: Block a specific session by its ID. The blocked session's tokens
+        will be invalidated
+      parameters:
+      - description: Session ID (UUID)
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Block session
+      tags:
+      - sessions
+  /auth/verify-email:
+    get:
+      description: Verify email address using a verification code passed as a query
+        parameter
+      parameters:
+      - description: Verification code
+        in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Code is required or invalid
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Verify email
+      tags:
+      - auth
+  /health:
+    get:
+      description: Check if the server is running and return the current environment
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.HealthResponse'
+      summary: Health check
+      tags:
+      - system
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.UserResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
       tags:
       - users
     patch:
       consumes:
       - application/json
-      description: Update self
+      description: Update the authenticated user's profile
       parameters:
-      - description: Update dto
+      - description: Update profile request
         in: body
         name: request
         required: true
@@ -579,9 +920,23 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid current password or password required
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update self
+      summary: Update current user
       tags:
       - users
 securityDefinitions:

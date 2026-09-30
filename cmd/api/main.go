@@ -131,12 +131,7 @@ func main() {
 	}
 
 	api.Get("/docs/*", swaggo.HandlerDefault)
-
-	api.Get("/health", func(c fiber.Ctx) error {
-		return response.Success(c, fiber.StatusOK, "server is healthy!", fiber.Map{
-			"env": cfg.App.Env,
-		})
-	})
+	api.Get("/health", healthCheck(cfg.App.Env))
 
 	sh := sessionHandler.NewSessionHandler(ss)
 
@@ -169,4 +164,19 @@ func main() {
 	}
 
 	l.Info("server stopped!")
+}
+
+// healthCheck godoc
+// @Summary		Health check
+// @Description	Check if the server is running and return the current environment
+// @Tags			system
+// @Produce		json
+// @Success		200	{object}	response.HealthResponse
+// @Router			/health [get]
+func healthCheck(env string) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		return response.Success(c, fiber.StatusOK, "server is healthy!", fiber.Map{
+			"env": env,
+		})
+	}
 }

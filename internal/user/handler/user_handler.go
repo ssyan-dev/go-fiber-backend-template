@@ -23,13 +23,15 @@ func (h *UserHandler) RegisterRoutes(protected fiber.Router) {
 }
 
 // getMe godoc
-// @Summary		Get self
-// @Description	Get self
+// @Summary		Get current user
+// @Description	Get the authenticated user's profile information
 // @Tags			users
 // @Accept		json
 // @Produce		json
 // @Security	BearerAuth
-// @Success		200	{object}	models.User
+// @Success		200	{object}	response.UserResponse{data=models.User}
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		404	{object}	response.ErrorResponse	"User not found"
 // @Router			/users/me [get]
 func (h *UserHandler) getMe(c fiber.Ctx) error {
 	userID, ok := auth.GetMe(c)
@@ -46,21 +48,24 @@ func (h *UserHandler) getMe(c fiber.Ctx) error {
 }
 
 type updateUserReq struct {
-	Email           *string `json:"email" validate:"omitempty,email"`
-	CurrentPassword *string `json:"current_password" validate:"omitempty,min=6"`
-	NewPassword     *string `json:"new_password" validate:"omitempty,min=6"`
-	AvatarURL       *string `json:"avatar_url" validate:"omitempty,url"`
+	Email           *string `json:"email" validate:"omitempty,email" example:"newemail@example.com"`
+	CurrentPassword *string `json:"current_password" validate:"omitempty,min=6" example:"oldpassword123"`
+	NewPassword     *string `json:"new_password" validate:"omitempty,min=6" example:"newpassword123"`
+	AvatarURL       *string `json:"avatar_url" validate:"omitempty,url" example:"https://example.com/avatar.png"`
 }
 
 // updateMe godoc
-// @Summary		Update self
-// @Description	Update self
+// @Summary		Update current user
+// @Description	Update the authenticated user's profile
 // @Tags			users
 // @Accept		json
 // @Produce		json
 // @Security	BearerAuth
-// @Param			request	body		updateUserReq	true	"Update dto"
-// @Success		200
+// @Param			request	body		updateUserReq	true	"Update profile request"
+// @Success		200	{object}	response.SuccessResponse
+// @Failure		400	{object}	response.ErrorResponse	"Invalid current password or password required"
+// @Failure		401	{object}	response.ErrorResponse	"Unauthorized"
+// @Failure		500	{object}	response.ErrorResponse	"Internal server error"
 // @Router			/users/me [patch]
 func (h *UserHandler) updateMe(c fiber.Ctx) error {
 	userID, ok := c.Locals("user_id").(string)
