@@ -5,18 +5,33 @@ export PROJECT_ROOT=$(shell pwd)
 
 BACKEND_MAIN = cmd/api/main.go
 BACKEND_BIN = ./bin/api
+WORKER_MAIN = cmd/worker/main.go
+WORKER_BIN = ./bin/worker
 
 # app
 dev:
 	air
 
-build: clean swagger
+worker:
+	go run $(WORKER_MAIN)
+
+build: build-api build-worker
+
+build-api: clean swagger
 	go build -o $(BACKEND_BIN) $(BACKEND_MAIN)
 
-run:
+build-worker:
+	go build -o $(WORKER_BIN) $(WORKER_MAIN)
+
+run-api:
 	$(BACKEND_BIN)
 
-br: build run
+run-worker:
+	$(WORKER_BIN)
+
+br: build-api run-api
+
+br-worker: build-worker run-worker
 
 clean: tidy fmt
 	rm -rf ./bin

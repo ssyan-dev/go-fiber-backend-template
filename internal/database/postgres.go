@@ -13,7 +13,18 @@ func NewPostgres(ctx context.Context, cfg *config.PostgresConfig) (*pgxpool.Pool
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName,
 	)
 
-	pool, err := pgxpool.New(ctx, dsn)
+	poolConfig, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse postgres config: %w", err)
+	}
+
+	poolConfig.MaxConns = cfg.MaxConns
+	poolConfig.MinConns = cfg.MinConns
+	poolConfig.MaxConnLifetime = cfg.MaxConnLifetime
+	poolConfig.MaxConnIdleTime = cfg.MaxConnIdleTime
+	poolConfig.HealthCheckPeriod = cfg.HealthCheckPeriod
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, err
 	}

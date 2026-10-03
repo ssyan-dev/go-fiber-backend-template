@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/config"
-	"github.com/ssyan-dev/go-fiber-backend-template/internal/infra/mailer"
+	"github.com/ssyan-dev/go-fiber-backend-template/internal/infra/queue"
 	"github.com/ssyan-dev/go-fiber-backend-template/internal/models"
 	sessionService "github.com/ssyan-dev/go-fiber-backend-template/internal/sessions/service"
 	userService "github.com/ssyan-dev/go-fiber-backend-template/internal/user/service"
@@ -40,35 +40,35 @@ type AuthService interface {
 }
 
 type authSvc struct {
-	userSvc    userService.UserService
-	sessionSvc sessionService.SessionService
-	vcSvc      vcService.VerificationCodeService
-	mailerSvc  mailer.MailerService
-	cfg        *config.JWTConfig
-	authCfg    *config.AuthConfig
-	baseURL    string
-	l          *zap.Logger
+	userSvc         userService.UserService
+	sessionSvc      sessionService.SessionService
+	vcSvc           vcService.VerificationCodeService
+	taskDistributor queue.TaskDistributor
+	cfg             *config.JWTConfig
+	authCfg         *config.AuthConfig
+	baseURL         string
+	l               *zap.Logger
 }
 
 func NewAuthService(
 	userSvc userService.UserService,
 	sessionSvc sessionService.SessionService,
 	vcSvc vcService.VerificationCodeService,
-	mailerSvc mailer.MailerService,
+	taskDistributor queue.TaskDistributor,
 	cfg *config.JWTConfig,
 	authCfg *config.AuthConfig,
 	baseURL string,
 	l *zap.Logger,
 ) AuthService {
 	return &authSvc{
-		userSvc:    userSvc,
-		sessionSvc: sessionSvc,
-		vcSvc:      vcSvc,
-		mailerSvc:  mailerSvc,
-		cfg:        cfg,
-		authCfg:    authCfg,
-		baseURL:    baseURL,
-		l:          l,
+		userSvc:         userSvc,
+		sessionSvc:      sessionSvc,
+		vcSvc:           vcSvc,
+		taskDistributor: taskDistributor,
+		cfg:             cfg,
+		authCfg:         authCfg,
+		baseURL:         baseURL,
+		l:               l,
 	}
 }
 
@@ -94,10 +94,11 @@ func (s *authSvc) sendEmailVerificationCode(ctx context.Context, userID, email s
 		return err
 	}
 
-	return s.mailerSvc.SendTemplate(ctx, email, "Verify your email", "email-verification.html", map[string]string{
-		"Email": email,
-		"URL":   s.baseURL + "/auth/verify-email",
-		"Code":  verificationCode,
+	return s.taskDistributor.DistributeEmailVerification(ctx, &queue.EmailVerificationPayload{
+		UserID: userID,
+		Email:  email,
+		URL:    s.baseURL + "/auth/verify-email",
+		Code:   verificationCode,
 	})
 }
 
@@ -245,10 +246,11 @@ func (s *authSvc) ForgotPassword(ctx context.Context, email string) error {
 		return err
 	}
 
-	return s.mailerSvc.SendTemplate(ctx, email, "Reset your password", "password-reset.html", map[string]string{
-		"Email": email,
-		"URL":   s.baseURL + "/auth/reset-password",
-		"Code":  verificationCode,
+	return s.taskDistributor.DistributeEmailPasswordReset(ctx, &queue.EmailPasswordResetPayload{
+		UserID: user.ID.String(),
+		Email:  email,
+		URL:    s.baseURL + "/auth/reset-password",
+		Code:   verificationCode,
 	})
 }
 

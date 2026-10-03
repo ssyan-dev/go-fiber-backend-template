@@ -11,15 +11,24 @@ import (
 )
 
 type AuthHandler struct {
-	svc service.AuthService
+	svc     service.AuthService
+	limiter fiber.Handler
 }
 
-func NewAuthHandler(svc service.AuthService) *AuthHandler {
-	return &AuthHandler{svc: svc}
+func NewAuthHandler(svc service.AuthService, limiter fiber.Handler) *AuthHandler {
+	return &AuthHandler{
+		svc:     svc,
+		limiter: limiter,
+	}
 }
 
 func (h *AuthHandler) RegisterRoutes(api fiber.Router) {
-	g := api.Group("/auth")
+	authLimiter := h.limiter
+	if authLimiter == nil {
+		authLimiter = middleware.AuthLimiter(nil, nil)
+	}
+	g := api.Group("/auth", authLimiter)
+
 	g.Post("/register", middleware.Validate[registerReq](), h.register)
 	g.Post("/login", middleware.Validate[loginReq](), h.login)
 	g.Post("/logout", h.logout)

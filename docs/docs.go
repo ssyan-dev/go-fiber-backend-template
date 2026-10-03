@@ -975,7 +975,7 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
-                "description": "Check if the server is running and return the current environment",
+                "description": "Check if the server, postgresql and redis is healthy",
                 "produces": [
                     "application/json"
                 ],
@@ -986,6 +986,12 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/response.HealthResponse"
                         }
@@ -1368,6 +1374,20 @@ const docTemplate = `{
                 "env": {
                     "type": "string",
                     "example": "development"
+                },
+                "services": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2026-10-03T18:00:00Z"
                 }
             }
         },
@@ -1379,7 +1399,7 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string",
-                    "example": "server is healthy!"
+                    "example": "server is healthy"
                 },
                 "success": {
                     "type": "boolean",

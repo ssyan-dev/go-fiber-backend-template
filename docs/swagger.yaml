@@ -185,13 +185,23 @@ definitions:
       env:
         example: development
         type: string
+      services:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2026-10-03T18:00:00Z"
+        type: string
     type: object
   response.HealthResponse:
     properties:
       data:
         $ref: '#/definitions/response.HealthData'
       message:
-        example: server is healthy!
+        example: server is healthy
         type: string
       success:
         example: true
@@ -863,12 +873,16 @@ paths:
       - auth
   /health:
     get:
-      description: Check if the server is running and return the current environment
+      description: Check if the server, postgresql and redis is healthy
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/response.HealthResponse'
+        "503":
+          description: Service Unavailable
           schema:
             $ref: '#/definitions/response.HealthResponse'
       summary: Health check

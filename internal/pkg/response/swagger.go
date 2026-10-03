@@ -27,11 +27,14 @@ type UserResponse struct {
 }
 
 type HealthData struct {
-	Env string `json:"env" example:"development"`
+	Status    string            `json:"status" example:"ok"`
+	Env       string            `json:"env" example:"development"`
+	Timestamp string            `json:"timestamp" example:"2026-10-03T18:00:00Z"`
+	Services  map[string]string `json:"services"`
 }
 
 type HealthResponse struct {
 	Success bool       `json:"success" example:"true"`
-	Message string     `json:"message" example:"server is healthy!"`
+	Message string     `json:"message" example:"server is healthy"`
 	Data    HealthData `json:"data"`
 }
